@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
     super.initState();
 
     // get the max length and answer from settings
-    _maxLength = 5;
+    _maxLength = 6;
     _maxAnswer = 6;
 
     Future.microtask(() async {
