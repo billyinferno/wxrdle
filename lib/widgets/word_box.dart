@@ -41,11 +41,17 @@ class WordBox extends StatelessWidget {
 
       // now scan thru all the guess on the answer
       for(int i = 0; i < guess.length; i++) {
-        _currGuess = guess.substring(i, (i + 1));
-        _guessPos = _answer.indexOf(_currGuess);
-        if(_guessPos >= 0) {
-          _letterBoxColor[i] = locationGuess;
-          _answer = removeCharacter(_answer, _guessPos);
+        // only check if the color is transparent
+        if(_letterBoxColor[i] == Colors.transparent) {
+          _currGuess = guess.substring(i, (i + 1));
+          _guessPos = _answer.indexOf(_currGuess);
+          if(_guessPos >= 0) {
+            _letterBoxColor[i] = locationGuess;
+            _answer = removeCharacter(_answer, _guessPos);
+          }
+          else {
+            _letterBoxColor[i] = wrongGuess;
+          }
         }
       }
     }
