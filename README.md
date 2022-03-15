@@ -1,16 +1,18 @@
 # wxrdle
 
-A new Flutter project.
+Worlde but on Steroid
 
-## Getting Started
+## Note
+All the word is pulled from www.wordfinderapi.com.
 
-This project is a starting point for a Flutter application.
+## Description
+Has ability to change the length of the wordle, for you that want some extreme challenge.
 
-A few resources to get you started if this is your first Flutter project:
+## Looks and Feel
+<img src="https://user-images.githubusercontent.com/20193342/158436115-cecb231b-589a-4126-b59c-ad3c56db6b8e.png" data-canonical-src="https://user-images.githubusercontent.com/20193342/158436115-cecb231b-589a-4126-b59c-ad3c56db6b8e.png" width="450" />
 
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
+<img src="https://user-images.githubusercontent.com/20193342/158436491-99e15e53-a0a7-4051-a3e7-7316255facd7.png" data-canonical-src="https://user-images.githubusercontent.com/20193342/158436491-99e15e53-a0a7-4051-a3e7-7316255facd7.png" width="450" />
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## How to Run
+1. clone the project
+2. flutter run!
