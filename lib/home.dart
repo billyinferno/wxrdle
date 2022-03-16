@@ -1,13 +1,13 @@
 import 'dart:math';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
+import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/word_list.dart';
+import 'package:wxrdle/utils/show_alert_dialog.dart';
 import 'package:wxrdle/utils/show_loader_dialog.dart';
 import 'package:wxrdle/widgets/keyboard_button.dart';
 import 'package:wxrdle/widgets/word_box.dart';
-import 'globals/colors.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({ Key? key }) : super(key: key);
@@ -29,6 +29,7 @@ class _HomePageState extends State<HomePage> {
     1:[true,true,true,true,true,true,true,true,true],
     2:[true,true,true,true,true,true,true],
   };
+
   late Map<int, Widget> _wordBox;
   late int _currentIndex;
   late String _answer;
@@ -38,6 +39,8 @@ class _HomePageState extends State<HomePage> {
   late int _maxLength;
   late int _maxAnswer;
   late WordList _wordList;
+  late double _buttonWidth;
+
   bool _isLoading = true;
 
   @override
@@ -75,6 +78,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _wordle() {
+    // calculate the button width
+    _buttonWidth = ((MediaQuery.of(context).size.width - 20) / 7);
+    if (_buttonWidth > 80) {
+      _buttonWidth = 80;
+    }
+
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -86,6 +95,36 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
+          leading: IconButton(
+            icon: const Icon(
+              CupertinoIcons.line_horizontal_3
+            ),
+            onPressed: (() {
+              //TODO: open settings
+              debugPrint("Settings");
+            }),
+          ),
+          actions: <Widget>[
+            IconButton(
+              icon: const Icon(
+                CupertinoIcons.arrow_counterclockwise
+              ),
+              onPressed: (() async {
+                showLoaderDialog(context);
+                await resetGame().then((_) {
+                  _enableAllButton();
+
+                  // remove the loader box
+                  Navigator.of(context).pop();
+
+                  // set state to rebuild the app
+                  setState(() {
+                    _isLoading = false;
+                  });
+                });
+              }),
+            ),
+          ],
         ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,37 +203,65 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: InkWell(
-                            onTap: () {
-                              // debugPrint("Enter");
-                              if(_guess.length == _maxLength) {
-                                // check the answer
-                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
+                      SizedBox(
+                        height: 50,
+                        width: _buttonWidth,
+                        child: InkWell(
+                          onTap: () {
+                            // debugPrint("Enter");
+                            if(_guess.length == _maxLength) {
+                              // check the answer
+                              _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
 
-                                // loop thru the guess and see if there are character that not on the answer
-                                String _currGuess;
-                                int _currPos;
-                                for(int i = 0; i < _guess.length; i++) {
-                                  _currGuess = _guess.substring(i, i+1);
-                                  _currPos = _answer.indexOf(_currGuess);
-                                  if(_currPos < 0) {
-                                    // wrong answer disabled button
-                                    _disableButton(_currGuess);
-                                  }
+                              // loop thru the guess and see if there are character that not on the answer
+                              String _currGuess;
+                              int _currPos;
+                              for(int i = 0; i < _guess.length; i++) {
+                                _currGuess = _guess.substring(i, i+1);
+                                _currPos = _answer.indexOf(_currGuess);
+                                if(_currPos < 0) {
+                                  // wrong answer disabled button
+                                  _disableButton(_currGuess);
                                 }
+                              }
 
-                                // check if the answer correct or not?
-                                if(_answer == _guess) {
-                                  // add point
-                                  _currentPoint = _currentPoint + _answerPoint;
+                              // check if the answer correct or not?
+                              if(_answer == _guess) {
+                                // add point
+                                _currentPoint = _currentPoint + _answerPoint;
 
-                                  // show dialog, and reset game
-                                  _showAlertDialog(
-                                    title: "You Win",
-                                    body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points."
+                                // show dialog, and reset game
+                                showAlertDialog(
+                                  context: context,
+                                  title: "You Win",
+                                  body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points.",
+                                  callback: resetGame,
+                                  enableButton: _enableAllButton
+                                ).then((value) {
+                                  // just set state
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+                                });
+                              }
+                              else {
+                                // next current index
+                                if(_currentIndex < (_maxAnswer - 1)) {
+                                  setState(() {
+                                    // next index
+                                    _currentIndex = _currentIndex + 1;
+ 
+                                    // clear the guess
+                                    _guess = "";
+                                  });
+                                }
+                                else {
+                                  showAlertDialog(
+                                    context: context,
+                                    title: "You Lose",
+                                    body: "Try again next time, correct answer is " + _answer,
+                                    callback: resetGame,
+                                    enableButton: _enableAllButton
                                   ).then((value) {
                                     // just set state
                                     setState(() {
@@ -202,46 +269,23 @@ class _HomePageState extends State<HomePage> {
                                     });
                                   });
                                 }
-                                else {
-                                  // next current index
-                                  if(_currentIndex < (_maxAnswer - 1)) {
-                                    setState(() {
-                                      // next index
-                                      _currentIndex = _currentIndex + 1;
- 
-                                      // clear the guess
-                                      _guess = "";
-                                    });
-                                  }
-                                  else {
-                                    _showAlertDialog(
-                                      title: "You Lose",
-                                      body: "Try again next time, correct answer is " + _answer
-                                    ).then((value) {
-                                      // just set state
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
-                                    });
-                                  }
-                                }
                               }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: buttonBackground,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              margin: const EdgeInsets.all(2),
-                              child: const Align(
-                                alignment: Alignment.center,
-                                child: Text(
-                                  "ENTER",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor
-                                  ),
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: buttonBackground,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            margin: const EdgeInsets.all(2),
+                            child: const Align(
+                              alignment: Alignment.center,
+                              child: Text(
+                                "ENTER",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: textColor
                                 ),
                               ),
                             ),
@@ -266,33 +310,32 @@ class _HomePageState extends State<HomePage> {
                           })
                         );
                       }),
-                      Expanded(
-                        child: SizedBox(
-                          height: 50,
-                          child: InkWell(
-                            onTap: () {
-                              // debugPrint("Delete");
-                              if(_guess.isNotEmpty) {
-                                // debugPrint(value);
-                                // set the current guess
-                                _guess = _guess.substring(0, _guess.length - 1);
-                                // now change the wordbox on current index
-                                setState(() {
-                                  _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                                });
-                              }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: buttonBackground,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              margin: const EdgeInsets.all(2),
-                              child: const Align(
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  CupertinoIcons.delete_left
-                                ),
+                      SizedBox(
+                        height: 50,
+                        width: _buttonWidth,
+                        child: InkWell(
+                          onTap: () {
+                            // debugPrint("Delete");
+                            if(_guess.isNotEmpty) {
+                              // debugPrint(value);
+                              // set the current guess
+                              _guess = _guess.substring(0, _guess.length - 1);
+                              // now change the wordbox on current index
+                              setState(() {
+                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                              });
+                            }
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: buttonBackground,
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            margin: const EdgeInsets.all(2),
+                            child: const Align(
+                              alignment: Alignment.center,
+                              child: Icon(
+                                CupertinoIcons.delete_left
                               ),
                             ),
                           ),
@@ -340,50 +383,6 @@ class _HomePageState extends State<HomePage> {
         _keyboardState[i]![j] = true;
       }
     }
-  }
-
-  Future<void> _showAlertDialog({required String title, required String body}) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text(body),
-              ],
-            ),
-          ),
-          actions: <Widget>[
-            MaterialButton(
-              child: const Text("NEW WORD"),
-              color: correctGuess,
-              onPressed: (() async {
-                // show loader
-                showLoaderDialog(context);
-                
-                // reset the game
-                await resetGame();
-                _enableAllButton();
-                
-                // remove the loader
-                Navigator.of(context).pop();
-
-                // remove the dialog
-                Navigator.of(context).pop();
-              })
-            ),
-          ],
-        );
-      }
-    );
   }
 
   Future<void> resetGame() async {

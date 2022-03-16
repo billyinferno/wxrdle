@@ -10,6 +10,9 @@ class KeyboardButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     double _width = (MediaQuery.of(context).size.width - 20) / 10;
+    if (_width > 50) {
+      _width = 50;
+    }
     return SizedBox(
       width: _width,
       height: 50,
