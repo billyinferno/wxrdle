@@ -19,3 +19,5 @@ Has ability to change the length of the wordle, for you that want some extreme c
 
 ## Docker Image
 https://hub.docker.com/repository/docker/adimartha/wxrdle
+
+docker pull adimartha/wxrdle:latest
