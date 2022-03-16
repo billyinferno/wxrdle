@@ -99,28 +99,19 @@ class _HomePageState extends State<HomePage> {
                   ...List.generate(_maxAnswer, (index) {
                     return _wordBox[index]!;
                   }),
-                  const SizedBox(height: 10,),
+                  const SizedBox(height: 5,),
                   Text(
                     _currentPoint.toString(),
                     style: const TextStyle(
-                      fontSize: 25,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
             ),
-            const Center(
-              child: Text(
-                "Word is provided by https://word.tips/",
-                style: TextStyle(
-                  fontSize: 10,
-                ),
-              ),
-            ),
-            const SizedBox(height: 25,),
             Container(
-              height: 180,
+              height: 160,
               padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
               width: double.infinity,
               child: Column(
@@ -312,7 +303,18 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-            const SizedBox(height: 20,),
+            const SizedBox(
+              height: 20,
+              child: Align(
+                alignment: Alignment.center,
+                child: Text(
+                  "Word is provided by https://word.tips/",
+                  style: TextStyle(
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
