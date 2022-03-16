@@ -16,3 +16,6 @@ Has ability to change the length of the wordle, for you that want some extreme c
 ## How to Run
 1. clone the project
 2. flutter run!
+
+## Docker Image
+https://hub.docker.com/repository/docker/adimartha/wxrdle
