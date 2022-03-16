@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/model/word_list.dart';
+import 'package:wxrdle/utils/show_loader_dialog.dart';
 import 'package:wxrdle/widgets/keyboard_button.dart';
 import 'package:wxrdle/widgets/word_box.dart';
 import 'globals/colors.dart';
@@ -24,6 +25,8 @@ class _HomePageState extends State<HomePage> {
   late Map<int, Widget> _wordBox;
   late int _currentIndex;
   late String _answer;
+  late int _answerPoint;
+  late int _currentPoint;
   late String _guess;
   late int _maxLength;
   late int _maxAnswer;
@@ -37,6 +40,9 @@ class _HomePageState extends State<HomePage> {
     // get the max length and answer from settings
     _maxLength = 5;
     _maxAnswer = 6;
+
+    // initialize the current point as 0
+    _currentPoint = 0;
 
     Future.microtask(() async {
       await resetGame().then((_) {
@@ -82,12 +88,30 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_maxAnswer, (index) {
-                  return _wordBox[index]!;
-                }),
+                children: <Widget>[
+                  ...List.generate(_maxAnswer, (index) {
+                    return _wordBox[index]!;
+                  }),
+                  const SizedBox(height: 10,),
+                  Text(
+                    _currentPoint.toString(),
+                    style: const TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10,),
+            const Center(
+              child: Text(
+                "Word is provided by https://word.tips/",
+                style: TextStyle(
+                  fontSize: 10,
+                ),
+              ),
+            ),
+            const SizedBox(height: 25,),
             Container(
               height: 180,
               padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
@@ -145,7 +169,7 @@ class _HomePageState extends State<HomePage> {
                           height: 50,
                           child: InkWell(
                             onTap: () {
-                              debugPrint("Enter");
+                              // debugPrint("Enter");
                               if(_guess.length == _maxLength) {
                                 setState(() {                                
                                   // check the answer
@@ -153,8 +177,19 @@ class _HomePageState extends State<HomePage> {
 
                                   // check if the answer correct or not?
                                   if(_answer == _guess) {
-                                    // show popup box tell that you are win
-                                    debugPrint("Win!");
+                                    // add point
+                                    _currentPoint = _currentPoint + _answerPoint;
+
+                                    // show dialog, and reset game
+                                    _showAlertDialog(
+                                      title: "You Win",
+                                      body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points."
+                                    ).then((value) {
+                                      // just set state
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    });
                                   }
                                   else {
                                     // next current index
@@ -164,7 +199,15 @@ class _HomePageState extends State<HomePage> {
                                       _guess = "";
                                     }
                                     else {
-                                      debugPrint("Game Over!");
+                                      _showAlertDialog(
+                                        title: "You Lose",
+                                        body: "Try again next time, correct answer is " + _answer
+                                      ).then((value) {
+                                        // just set state
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      });
                                     }
                                   }
                                 }); 
@@ -213,7 +256,7 @@ class _HomePageState extends State<HomePage> {
                           height: 50,
                           child: InkWell(
                             onTap: () {
-                              debugPrint("Delete");
+                              // debugPrint("Delete");
                               if(_guess.isNotEmpty) {
                                 // debugPrint(value);
                                 // set the current guess
@@ -252,6 +295,49 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  Future<void> _showAlertDialog({required String title, required String body}) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                Text(body),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            MaterialButton(
+              child: const Text("NEW WORD"),
+              color: correctGuess,
+              onPressed: (() async {
+                // show loader
+                showLoaderDialog(context);
+                
+                // reset the game
+                await resetGame();
+                
+                // remove the loader
+                Navigator.of(context).pop();
+
+                // remove the dialog
+                Navigator.of(context).pop();
+              })
+            ),
+          ],
+        );
+      }
+    );
+  }
+
   Future<void> resetGame() async {
     await _getWordsFromAPI().then((value) {
       _wordList = value;
@@ -260,6 +346,7 @@ class _HomePageState extends State<HomePage> {
 
       // get the word from API call
       _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
+      _answerPoint = _wordList.wordPages[0].wordList[0].points;
       debugPrint(_answer);
       _guess = "";
 
