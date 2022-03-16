@@ -19,9 +19,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final Random _random = Random();
   final GetWordsAPI _getWordsAPI = GetWordsAPI();
-  final List<String> _keyboardRow1 = ["Q","W","E","R","T","Y","U","I","O","P"];
-  final List<String> _keyboardRow2 = ["A","S","D","F","G","H","J","K","L"];
-  final List<String> _keyboardRow3 = ["Z","X","C","V","B","N","M"];
+  final Map<int, List<String>> _keyboardRow = {
+    0:["Q","W","E","R","T","Y","U","I","O","P"],
+    1:["A","S","D","F","G","H","J","K","L"],
+    2:["Z","X","C","V","B","N","M"],
+  };
+  final Map<int, List<bool>> _keyboardState = {
+    0:[true,true,true,true,true,true,true,true,true,true],
+    1:[true,true,true,true,true,true,true,true,true],
+    2:[true,true,true,true,true,true,true],
+  };
   late Map<int, Widget> _wordBox;
   late int _currentIndex;
   late String _answer;
@@ -123,7 +130,8 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(10, (index) {
                       return KeyboardButton(
-                        char: _keyboardRow1[index],
+                        enabled: _keyboardState[0]![index],
+                        char: _keyboardRow[0]![index],
                         onPress: ((value) {
                           // check if the current guess length < than max length
                           if(_guess.length < _maxLength) {
@@ -144,7 +152,8 @@ class _HomePageState extends State<HomePage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(9, (index) {
                       return KeyboardButton(
-                        char: _keyboardRow2[index],
+                        char: _keyboardRow[1]![index],
+                        enabled: _keyboardState[1]![index],
                         onPress: ((value) {
                           // check if the current guess length < than max length
                           if(_guess.length < _maxLength) {
@@ -171,19 +180,52 @@ class _HomePageState extends State<HomePage> {
                             onTap: () {
                               // debugPrint("Enter");
                               if(_guess.length == _maxLength) {
-                                setState(() {                                
-                                  // check the answer
-                                  _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
+                                // check the answer
+                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
 
-                                  // check if the answer correct or not?
-                                  if(_answer == _guess) {
-                                    // add point
-                                    _currentPoint = _currentPoint + _answerPoint;
+                                // loop thru the guess and see if there are character that not on the answer
+                                String _currGuess;
+                                int _currPos;
+                                for(int i = 0; i < _guess.length; i++) {
+                                  _currGuess = _guess.substring(i, i+1);
+                                  _currPos = _answer.indexOf(_currGuess);
+                                  if(_currPos < 0) {
+                                    // wrong answer disabled button
+                                    _disableButton(_currGuess);
+                                  }
+                                }
 
-                                    // show dialog, and reset game
+                                // check if the answer correct or not?
+                                if(_answer == _guess) {
+                                  // add point
+                                  _currentPoint = _currentPoint + _answerPoint;
+
+                                  // show dialog, and reset game
+                                  _showAlertDialog(
+                                    title: "You Win",
+                                    body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points."
+                                  ).then((value) {
+                                    // just set state
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  });
+                                }
+                                else {
+                                  // next current index
+                                  if(_currentIndex < (_maxAnswer - 1)) {
+                                    setState(() {
+                                      // next index
+                                      _currentIndex = _currentIndex + 1;
+ 
+                                      // clear the guess
+                                      _guess = "";
+                                    });
+                                  }
+                                  else {
                                     _showAlertDialog(
-                                      title: "You Win",
-                                      body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points."
+                                      title: "You Lose",
+                                      body: "Try again next time, correct answer is " + _answer
                                     ).then((value) {
                                       // just set state
                                       setState(() {
@@ -191,26 +233,7 @@ class _HomePageState extends State<HomePage> {
                                       });
                                     });
                                   }
-                                  else {
-                                    // next current index
-                                    if(_currentIndex < (_maxAnswer - 1)) {
-                                      _currentIndex = _currentIndex + 1;
-                                      // clear the guess
-                                      _guess = "";
-                                    }
-                                    else {
-                                      _showAlertDialog(
-                                        title: "You Lose",
-                                        body: "Try again next time, correct answer is " + _answer
-                                      ).then((value) {
-                                        // just set state
-                                        setState(() {
-                                          _isLoading = false;
-                                        });
-                                      });
-                                    }
-                                  }
-                                }); 
+                                }
                               }
                             },
                             child: Container(
@@ -236,7 +259,8 @@ class _HomePageState extends State<HomePage> {
                       ),
                       ...List.generate(7, (index) {
                         return KeyboardButton(
-                          char: _keyboardRow3[index],
+                          char: _keyboardRow[2]![index],
+                          enabled: _keyboardState[2]![index],
                           onPress: ((value) {
                             // check if the current guess length < than max length
                             if(_guess.length < _maxLength) {
@@ -295,6 +319,27 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _disableButton(String char) {
+    // loop in keyboardRow to get where is the char location
+    for(int i = 0; i <= 2; i++) {
+      for(int j = 0; j < _keyboardRow[i]!.length; j++) {
+        // check if the char is the same or not
+        if(_keyboardRow[i]![j] == char) {
+          // disable this button
+          _keyboardState[i]![j] = false;
+        }
+      }
+    }
+  }
+
+  void _enableAllButton() {
+    for(int i = 0; i <= 2; i++) {
+      for(int j = 0; j < _keyboardRow[i]!.length; j++) {
+        _keyboardState[i]![j] = true;
+      }
+    }
+  }
+
   Future<void> _showAlertDialog({required String title, required String body}) async {
     return showDialog<void>(
       context: context,
@@ -324,6 +369,7 @@ class _HomePageState extends State<HomePage> {
                 
                 // reset the game
                 await resetGame();
+                _enableAllButton();
                 
                 // remove the loader
                 Navigator.of(context).pop();
@@ -347,7 +393,6 @@ class _HomePageState extends State<HomePage> {
       // get the word from API call
       _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
       _answerPoint = _wordList.wordPages[0].wordList[0].points;
-      debugPrint(_answer);
       _guess = "";
 
       // start from index 0, if index already _maxAnswer we will need to finished the game

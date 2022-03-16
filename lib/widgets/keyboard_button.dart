@@ -3,8 +3,9 @@ import 'package:wxrdle/globals/colors.dart';
 
 class KeyboardButton extends StatelessWidget {
   final String char;
+  final bool enabled;
   final Function(String) onPress;
-  const KeyboardButton({ Key? key, required this.char, required this.onPress }) : super(key: key);
+  const KeyboardButton({ Key? key, required this.char, required this.enabled, required this.onPress }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,11 +15,13 @@ class KeyboardButton extends StatelessWidget {
       height: 50,
       child: InkWell(
         onTap: (() {
-          onPress(char);
+          if(enabled) {
+            onPress(char);
+          }
         }),
         child: Container(
           decoration: BoxDecoration(
-            color: buttonBackground,
+            color: (enabled ? buttonBackground : buttonDisableBackground),
             borderRadius: BorderRadius.circular(5),
           ),
           margin: const EdgeInsets.all(2),
