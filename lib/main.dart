@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:wxrdle/home.dart';
-
+import 'package:wxrdle/storage/local_box.dart';
 import 'globals/colors.dart';
 
 void main() {
@@ -12,6 +13,8 @@ void main() {
   // initialize flutter application
   Future.wait([
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]), // set prefered orientation
+    Hive.initFlutter(),
+    LocalBox.init(),
   ]).then((_) {
     // if all the future success means application is initialized
     debugPrint("💯 Application Initialized");

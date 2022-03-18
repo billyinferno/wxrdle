@@ -1,12 +1,15 @@
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
+import 'package:wxrdle/model/answer_list.dart';
 import 'package:wxrdle/model/word_list.dart';
+import 'package:wxrdle/storage/local_box.dart';
 import 'package:wxrdle/utils/show_alert_dialog.dart';
-import 'package:wxrdle/utils/show_loader_dialog.dart';
 import 'package:wxrdle/widgets/keyboard_button.dart';
+import 'package:wxrdle/widgets/selector_range.dart';
 import 'package:wxrdle/widgets/word_box.dart';
 
 class HomePage extends StatefulWidget {
@@ -17,6 +20,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final ScrollController _scrollController = ScrollController();
   final Random _random = Random();
   final GetWordsAPI _getWordsAPI = GetWordsAPI();
   final Map<int, List<String>> _keyboardRow = {
@@ -34,14 +38,18 @@ class _HomePageState extends State<HomePage> {
   late int _currentIndex;
   late String _answer;
   late int _answerPoint;
+  late int _pointGot;
   late int _currentPoint;
   late String _guess;
   late int _maxLength;
   late int _maxAnswer;
   late WordList _wordList;
   late double _buttonWidth;
+  late int _selectedMaxLength;
+  late int _selectedMaxAnswer;
 
   bool _isLoading = true;
+  List<AnswerList> _answerList = [];
 
   @override
   void initState() {
@@ -54,13 +62,25 @@ class _HomePageState extends State<HomePage> {
     // initialize the current point as 0
     _currentPoint = 0;
 
+    // initialize wordbox as empty
+    _wordBox = {};
+
     Future.microtask(() async {
+      await _getConfiguration();
+      await _getCurrentPoint();
+      await _getAnswerList();
       await resetGame().then((_) {
         setState(() {
           _isLoading = false;
         });
       });
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,29 +115,25 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          leading: IconButton(
-            icon: const Icon(
-              CupertinoIcons.line_horizontal_3
-            ),
-            onPressed: (() {
-              //TODO: open settings
-              debugPrint("Settings");
-            }),
-          ),
           actions: <Widget>[
             IconButton(
               icon: const Icon(
                 CupertinoIcons.arrow_counterclockwise
               ),
               onPressed: (() async {
-                showLoaderDialog(context);
-                await resetGame().then((_) {
-                  _enableAllButton();
+                showAlertDialog(
+                  context: context,
+                  title: "Skipped",
+                  body: "Skipped answer is " + _answer,
+                  callback: resetGame,
+                  enableButton: _enableAllButton
+                ).then((value) async {
+                  // put the result as false
+                  // generate the answer list and put on the answer list
+                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                  _answerList.add(_answerData);
+                  await _putAnswerList();
 
-                  // remove the loader box
-                  Navigator.of(context).pop();
-
-                  // set state to rebuild the app
                   setState(() {
                     _isLoading = false;
                   });
@@ -126,27 +142,162 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
+        drawer: Drawer(
+          child: ListView(
+            children: <Widget>[
+              const SizedBox(
+                height: 80,
+                child: DrawerHeader(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Menu",
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
+                ),
+              ),
+              ListTile(
+                title: const Text(
+                  "Configuration"
+                ),
+                onTap: (() {
+                  debugPrint("Open configuration box");
+                  Navigator.of(context).pop();
+
+                  _selectedMaxLength = _maxLength;
+                  _selectedMaxAnswer = _maxAnswer;
+
+                  // show the dialog
+                  showDialog(
+                    barrierDismissible: false,
+                    context: context,
+                    builder: ((BuildContext context) {
+                      return AlertDialog(
+                        content: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: <Widget>[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: <Widget>[
+                                  const Expanded(
+                                    child: Text(
+                                      "Configuration",
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  ),
+                                  const SizedBox(width: 10,),
+                                  IconButton(
+                                    onPressed: (() {
+                                      // close the pop up
+                                      Navigator.of(context).pop();
+                                    }),
+                                    icon: Icon(
+                                      CupertinoIcons.clear,
+                                      color: Colors.white,
+                                    )
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 10,),
+                              Text("Max Length"),
+                              SelectorRange(
+                                selected: _selectedMaxLength,
+                                length: 6,
+                                start: 5,
+                                onSelect: ((value) {
+                                  debugPrint("Value pressed : " + value.toString());
+                                  _selectedMaxLength = value;
+                                })
+                              ),
+                              SizedBox(height: 20,),
+                              Text("Max Answer"),
+                              SelectorRange(
+                                selected: _selectedMaxAnswer,
+                                length: 4,
+                                start: 4,
+                                onSelect: ((value) {
+                                  debugPrint("Value pressed : " + value.toString());
+                                  _selectedMaxAnswer = value;
+                                })
+                              ),
+                              SizedBox(height: 20,),
+                              Center(
+                                child: MaterialButton(
+                                  onPressed: (() async {
+                                    debugPrint("Set the max length " + _selectedMaxLength.toString() + " and max answer " + _selectedMaxAnswer.toString());
+
+                                    _maxAnswer = _selectedMaxAnswer;
+                                    _maxLength = _selectedMaxLength;
+
+                                    await resetGame().then((_) {
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    });
+
+                                    Navigator.of(context).pop();
+                                  }),
+                                  child: Text("Apply"),
+                                  color: correctGuess,
+                                  minWidth: double.infinity,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  );
+                }),
+              ),
+              ListTile(
+                title: const Text(
+                  "History"
+                ),
+                onTap: (() {
+                  debugPrint("Open history box");
+                  Navigator.of(context).pop();
+                }),
+              )
+            ],
+          ),
+        ),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.start,
           children: <Widget>[
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  ...List.generate(_maxAnswer, (index) {
-                    return _wordBox[index]!;
-                  }),
-                  const SizedBox(height: 5,),
-                  Text(
-                    _currentPoint.toString(),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    ...List.generate(_maxAnswer, (index) {
+                      return _wordBox[index]!;
+                    }),
+                    const SizedBox(height: 5,),
+                    Text(
+                      _currentPoint.toString(),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             Container(
@@ -207,7 +358,7 @@ class _HomePageState extends State<HomePage> {
                         height: 50,
                         width: _buttonWidth,
                         child: InkWell(
-                          onTap: () {
+                          onTap: () async {
                             // debugPrint("Enter");
                             if(_guess.length == _maxLength) {
                               // check the answer
@@ -228,13 +379,22 @@ class _HomePageState extends State<HomePage> {
                               // check if the answer correct or not?
                               if(_answer == _guess) {
                                 // add point
-                                _currentPoint = _currentPoint + _answerPoint;
+                                _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
+                                _currentPoint = _currentPoint + _pointGot;
+
+                                // stored the current point to the box
+                                await LocalBox.put(key: 'current_point', value: _currentPoint);
+
+                                // generate the answer list and put on the answer list
+                                AnswerList _answerData = AnswerList(answer: _answer, correct: true);
+                                _answerList.add(_answerData);
+                                await _putAnswerList();
 
                                 // show dialog, and reset game
                                 showAlertDialog(
                                   context: context,
                                   title: "You Win",
-                                  body: "Congratulations, correct answer is " + _answer + " with " + _answerPoint.toString() + " points.",
+                                  body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
                                   callback: resetGame,
                                   enableButton: _enableAllButton
                                 ).then((value) {
@@ -256,6 +416,11 @@ class _HomePageState extends State<HomePage> {
                                   });
                                 }
                                 else {
+                                  // generate the answer list and put on the answer list
+                                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                  _answerList.add(_answerData);
+                                  await _putAnswerList();
+
                                   showAlertDialog(
                                     context: context,
                                     title: "You Lose",
@@ -385,6 +550,72 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _getConfiguration() async {
+    int? _currentMaxLength;
+    int? _currentMaxAnswer;
+
+    _currentMaxLength = LocalBox.get(key: 'max_length');
+    _currentMaxAnswer = LocalBox.get(key: 'max_answer');
+
+    if(_currentMaxLength == null) {
+      LocalBox.put(key: 'max_length', value: _maxLength);
+    }
+    else {
+      _maxLength = _currentMaxLength;
+    }
+
+    if(_currentMaxAnswer == null) {
+      LocalBox.put(key: 'max_answer', value: _maxAnswer);
+    }
+    else {
+      _maxAnswer = _currentMaxAnswer;
+    }
+  }
+
+  Future<void> _getCurrentPoint() async {
+    int? _currentPointOnBox;
+
+    _currentPointOnBox = LocalBox.get(key: 'current_point');
+    // check if _currentPointOnBox is null or not?
+    if(_currentPointOnBox == null) {
+      // put the current point as 0 on the box
+      LocalBox.put(key: 'current_point', value: 0);
+    }
+    else {
+      // put the current point on box to _currentPoint
+      _currentPoint = _currentPointOnBox;
+    }
+  }
+
+  Future<void> _getAnswerList() async {
+    dynamic _boxAnswerList;
+
+    _boxAnswerList = LocalBox.get(key: 'answer_list');
+    // check if this is not null?
+    if(_boxAnswerList != null) {
+      // this is list of answer, so convert this dynamic to list of string
+      List<String> _currentAnswerList = List<String>.from(_boxAnswerList);
+      for (String _currentList in _currentAnswerList) {
+        // convert this to answer list model
+        AnswerList _answer = AnswerList.fromJson(jsonDecode(_currentList));
+        // add this to the answer list
+        _answerList.add(_answer);
+      }
+    }
+  }
+
+  Future<void> _putAnswerList() async {
+    List<String> _listOfAnswer = [];
+
+    // loop thru the answer list
+    for (AnswerList _answerData in _answerList) {
+      _listOfAnswer.add(jsonEncode(_answerData.toJson()));
+    }
+
+    // put on the box
+    await LocalBox.put(key: 'answer_list', value: _listOfAnswer);
+  }
+
   Future<void> resetGame() async {
     await _getWordsFromAPI().then((value) {
       _wordList = value;
@@ -393,14 +624,14 @@ class _HomePageState extends State<HomePage> {
 
       // get the word from API call
       _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
-      _answerPoint = _wordList.wordPages[0].wordList[0].points;
+      _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ 6;
       _guess = "";
 
       // start from index 0, if index already _maxAnswer we will need to finished the game
       _currentIndex = 0;
 
       // generate word box widget and put onto _wordBox
-      _wordBox = {};
+      _wordBox.clear();
       for(int i=0; i<_maxAnswer; i++) {
         _wordBox[i] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
       }
