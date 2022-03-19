@@ -28,10 +28,10 @@ class _HomePageState extends State<HomePage> {
     1:["A","S","D","F","G","H","J","K","L"],
     2:["Z","X","C","V","B","N","M"],
   };
-  final Map<int, List<bool>> _keyboardState = {
-    0:[true,true,true,true,true,true,true,true,true,true],
-    1:[true,true,true,true,true,true,true,true,true],
-    2:[true,true,true,true,true,true,true],
+  final Map<int, List<int>> _keyboardState = {
+    0:[1,1,1,1,1,1,1,1,1,1],
+    1:[1,1,1,1,1,1,1,1,1],
+    2:[1,1,1,1,1,1,1],
   };
 
   late Map<int, Widget> _wordBox;
@@ -53,6 +53,7 @@ class _HomePageState extends State<HomePage> {
   late int _selectedMaxAnswer;
 
   late List<AnswerList> _answerList;
+  late Map<String, int> _keyboardResult;
   bool _isLoading = true;
 
   @override
@@ -385,6 +386,7 @@ class _HomePageState extends State<HomePage> {
                                     "https://word.tips",
                                     style: TextStyle(
                                       decoration: TextDecoration.underline,
+                                      fontSize: 12,
                                     ),
                                   ),
                                   onTap: (() {
@@ -404,6 +406,7 @@ class _HomePageState extends State<HomePage> {
                                     "https://yourdictionary.com",
                                     style: TextStyle(
                                       decoration: TextDecoration.underline,
+                                      fontSize: 12,
                                     ),
                                   ),
                                   onTap: (() {
@@ -516,76 +519,31 @@ class _HomePageState extends State<HomePage> {
                           width: _buttonWidth,
                           child: InkWell(
                             onTap: () async {
-                              // debugPrint("Enter");
                               if(_guess.length == _maxLength) {
-                                // check the answer
-                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
-    
-                                // loop thru the guess and see if there are character that not on the answer
-                                String _currGuess;
-                                int _currPos;
-                                for(int i = 0; i < _guess.length; i++) {
-                                  _currGuess = _guess.substring(i, i+1);
-                                  _currPos = _answer.indexOf(_currGuess);
-                                  if(_currPos < 0) {
-                                    // wrong answer disabled button
-                                    _disableButton(_currGuess);
-                                  }
-                                }
-    
-                                // check if the answer correct or not?
-                                if(_answer == _guess) {
-                                  // add point
-                                  _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
-                                  _currentPoint = _currentPoint + _pointGot;
-    
-                                  // stored the current point to the box
-                                  await LocalBox.put(key: 'current_point', value: _currentPoint);
-    
-                                  // generate the answer list and put on the answer list
-                                  AnswerList _answerData = AnswerList(answer: _answer, correct: true);
-                                  _answerList.add(_answerData);
-                                  await _putAnswerList();
-    
-                                  // show dialog, and reset game
-                                  showAlertDialog(
-                                    context: context,
-                                    title: "You Win",
-                                    body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
-                                    headword: _defHeadword,
-                                    part: _defPart,
-                                    meaning: _defMeaning,
-                                    url: _defUrl,
-                                    callback: resetGame,
-                                    enableButton: _enableAllButton
-                                  ).then((value) {
-                                    // just set state
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
+                                await _checkAnswer().then((_) async {
+                                  _keyboardResult.forEach((char, status) {
+                                    _disableButton(char, status);
                                   });
-                                }
-                                else {
-                                  // next current index
-                                  if(_currentIndex < (_maxAnswer - 1)) {
-                                    setState(() {
-                                      // next index
-                                      _currentIndex = _currentIndex + 1;
-     
-                                      // clear the guess
-                                      _guess = "";
-                                    });
-                                  }
-                                  else {
+
+                                  // check if the answer correct or not?
+                                  if(_answer == _guess) {
+                                    // add point
+                                    _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
+                                    _currentPoint = _currentPoint + _pointGot;
+
+                                    // stored the current point to the box
+                                    await LocalBox.put(key: 'current_point', value: _currentPoint);
+
                                     // generate the answer list and put on the answer list
-                                    AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                    AnswerList _answerData = AnswerList(answer: _answer, correct: true);
                                     _answerList.add(_answerData);
                                     await _putAnswerList();
-    
+
+                                    // show dialog, and reset game
                                     showAlertDialog(
                                       context: context,
-                                      title: "You Lose",
-                                      body: "Try again next time, correct answer is " + _answer,
+                                      title: "You Win",
+                                      body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
                                       headword: _defHeadword,
                                       part: _defPart,
                                       meaning: _defMeaning,
@@ -599,7 +557,42 @@ class _HomePageState extends State<HomePage> {
                                       });
                                     });
                                   }
-                                }
+                                  else {
+                                    // next current index
+                                    if(_currentIndex < (_maxAnswer - 1)) {
+                                      setState(() {
+                                        // next index
+                                        _currentIndex = _currentIndex + 1;
+
+                                        // clear the guess
+                                        _guess = "";
+                                      });
+                                    }
+                                    else {
+                                      // generate the answer list and put on the answer list
+                                      AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                      _answerList.add(_answerData);
+                                      await _putAnswerList();
+
+                                      showAlertDialog(
+                                        context: context,
+                                        title: "You Lose",
+                                        body: "Try again next time, correct answer is " + _answer,
+                                        headword: _defHeadword,
+                                        part: _defPart,
+                                        meaning: _defMeaning,
+                                        url: _defUrl,
+                                        callback: resetGame,
+                                        enableButton: _enableAllButton
+                                      ).then((value) {
+                                        // just set state
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      });
+                                    }
+                                  }
+                                });
                               }
                             },
                             child: Container(
@@ -695,14 +688,64 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  void _disableButton(String char) {
+  Future<void> _checkAnswer() async {
+    // check the answer
+    _wordBox[_currentIndex] = WordBox(
+      answer: _answer,
+      guess: _guess,
+      checkAnswer: true,
+      length: _maxLength,
+    );
+
+    String _tempAnswer = _answer;
+    String _currGuess = "";
+    String _currAnswer = "";
+    int _guessPos = -1;
+
+    // map the keyboard result with the guess
+    _keyboardResult = {};
+    for(int i = 0; i < _guess.length; i++) {
+      _keyboardResult[_guess.substring(i, (i+1))] = -1;
+    }
+
+    for(int i = 0; i < _guess.length; i++) {
+      _currGuess = _guess.substring(i, (i + 1));
+      _currAnswer = _answer.substring(i, (i + 1));
+      if(_currGuess == _currAnswer) {
+        _keyboardResult[_currGuess] = 2;
+        _tempAnswer = _tempAnswer.substring(0, i) + " " + _tempAnswer.substring(i + 1);
+      }
+    }
+
+    // now scan thru all the guess on the answer
+    for(int i = 0; i < _guess.length; i++) {
+      // only check if the color is transparent
+      _currGuess = _guess.substring(i, (i + 1));
+      if(_keyboardResult[_currGuess] == -1) {
+        _guessPos = _tempAnswer.indexOf(_currGuess);
+        if(_guessPos >= 0) {
+          _keyboardResult[_currGuess] = 3;
+          _tempAnswer = _tempAnswer.substring(0, _guessPos) + " " + _tempAnswer.substring(_guessPos + 1);
+        }
+        else {
+          _keyboardResult[_currGuess] = 0;
+        }
+      }
+    }
+
+    // _keyboardResult.forEach((key, value) {
+    //   debugPrint(key + " -> " + value.toString());
+    // });
+  }
+
+  void _disableButton(String char, int status) {
     // loop in keyboardRow to get where is the char location
     for(int i = 0; i <= 2; i++) {
       for(int j = 0; j < _keyboardRow[i]!.length; j++) {
         // check if the char is the same or not
         if(_keyboardRow[i]![j] == char) {
           // disable this button
-          _keyboardState[i]![j] = false;
+          _keyboardState[i]![j] = status;
         }
       }
     }
@@ -711,7 +754,7 @@ class _HomePageState extends State<HomePage> {
   void _enableAllButton() {
     for(int i = 0; i <= 2; i++) {
       for(int j = 0; j < _keyboardRow[i]!.length; j++) {
-        _keyboardState[i]![j] = true;
+        _keyboardState[i]![j] = 1;
       }
     }
   }
@@ -799,6 +842,7 @@ class _HomePageState extends State<HomePage> {
       }
 
       _guess = "";
+      _keyboardResult = {};
 
       // get the definition
       await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {

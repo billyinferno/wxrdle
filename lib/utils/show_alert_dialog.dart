@@ -110,6 +110,7 @@ Future<void> showAlertDialog({
         ),
         actions: <Widget>[
           MaterialButton(
+            minWidth: double.infinity,
             child: const Text("NEW WORD"),
             color: correctGuess,
             onPressed: (() async {
