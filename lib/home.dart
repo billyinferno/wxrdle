@@ -129,6 +129,12 @@ class _HomePageState extends State<HomePage> {
                 CupertinoIcons.arrow_counterclockwise
               ),
               onPressed: (() async {
+                // put the result as false
+                // generate the answer list and put on the answer list
+                AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                _answerList.add(_answerData);
+                await _putAnswerList();
+
                 showAlertDialog(
                   context: context,
                   title: "Skipped",
@@ -140,12 +146,6 @@ class _HomePageState extends State<HomePage> {
                   callback: resetGame,
                   enableButton: _enableAllButton
                 ).then((value) async {
-                  // put the result as false
-                  // generate the answer list and put on the answer list
-                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-                  _answerList.add(_answerData);
-                  await _putAnswerList();
-
                   setState(() {
                     _isLoading = false;
                   });
