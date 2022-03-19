@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/answer_list.dart';
@@ -367,7 +366,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 onTap: (() {
-                                  launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
+                                  //launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
                                 }),
                               ),
                               const SizedBox(height: 10,),
@@ -386,7 +385,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 onTap: (() {
-                                  launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
+                                  //launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
                                 }),
                               ),
                               const SizedBox(height: 10,),
@@ -405,7 +404,7 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 onTap: (() {
-                                  launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
+                                  //launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
                                 }),
                               ),
                               const SizedBox(height: 10,),
