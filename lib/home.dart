@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/answer_list.dart';
@@ -44,16 +45,23 @@ class _HomePageState extends State<HomePage> {
   late int _maxLength;
   late int _maxAnswer;
   late WordList _wordList;
+  late String? _defHeadword;
+  late String? _defPart;
+  late String? _defMeaning;
+  late String? _defUrl;
   late double _buttonWidth;
   late int _selectedMaxLength;
   late int _selectedMaxAnswer;
 
+  late List<AnswerList> _answerList;
   bool _isLoading = true;
-  List<AnswerList> _answerList = [];
 
   @override
   void initState() {
     super.initState();
+
+    // initialize answer list
+    _answerList = [];
 
     // get the max length and answer from settings
     _maxLength = 5;
@@ -125,6 +133,10 @@ class _HomePageState extends State<HomePage> {
                   context: context,
                   title: "Skipped",
                   body: "Skipped answer is " + _answer,
+                  headword: _defHeadword,
+                  part: _defPart,
+                  meaning: _defMeaning,
+                  url: _defUrl,
                   callback: resetGame,
                   enableButton: _enableAllButton
                 ).then((value) async {
@@ -164,15 +176,15 @@ class _HomePageState extends State<HomePage> {
                 title: const Text(
                   "Configuration"
                 ),
-                onTap: (() {
-                  debugPrint("Open configuration box");
+                onTap: (() async {
+                  // debugPrint("Open configuration box");
                   Navigator.of(context).pop();
 
                   _selectedMaxLength = _maxLength;
                   _selectedMaxAnswer = _maxAnswer;
 
                   // show the dialog
-                  showDialog(
+                  await showDialog(
                     barrierDismissible: false,
                     context: context,
                     builder: ((BuildContext context) {
@@ -202,15 +214,15 @@ class _HomePageState extends State<HomePage> {
                                       // close the pop up
                                       Navigator.of(context).pop();
                                     }),
-                                    icon: Icon(
+                                    icon: const Icon(
                                       CupertinoIcons.clear,
                                       color: Colors.white,
                                     )
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10,),
-                              Text("Max Length"),
+                              const SizedBox(height: 10,),
+                              const Text("Max Length"),
                               SelectorRange(
                                 selected: _selectedMaxLength,
                                 length: 6,
@@ -220,8 +232,8 @@ class _HomePageState extends State<HomePage> {
                                   _selectedMaxLength = value;
                                 })
                               ),
-                              SizedBox(height: 20,),
-                              Text("Max Answer"),
+                              const SizedBox(height: 20,),
+                              const Text("Max Answer"),
                               SelectorRange(
                                 selected: _selectedMaxAnswer,
                                 length: 4,
@@ -231,7 +243,7 @@ class _HomePageState extends State<HomePage> {
                                   _selectedMaxAnswer = value;
                                 })
                               ),
-                              SizedBox(height: 20,),
+                              const SizedBox(height: 20,),
                               Center(
                                 child: MaterialButton(
                                   onPressed: (() async {
@@ -248,7 +260,7 @@ class _HomePageState extends State<HomePage> {
 
                                     Navigator.of(context).pop();
                                   }),
-                                  child: Text("Apply"),
+                                  child: const Text("Apply"),
                                   color: correctGuess,
                                   minWidth: double.infinity,
                                 ),
@@ -266,8 +278,151 @@ class _HomePageState extends State<HomePage> {
                   "History"
                 ),
                 onTap: (() {
-                  debugPrint("Open history box");
+                  // debugPrint("Open history box");
                   Navigator.of(context).pop();
+
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (BuildContext contex) {
+                      return AlertDialog(
+                        title: const Text(
+                          "History",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: SizedBox(
+                          height: 350,
+                          width: 300,
+                          child: Column(
+                            children: <Widget>[
+                              Expanded(
+                                child: ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: List<Widget>.generate(_answerList.length, (index) {
+                                    return Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                      children: <Widget>[
+                                        Expanded(child: Text(_answerList[index].answer)),
+                                        Icon(
+                                          (_answerList[index].correct ? CupertinoIcons.check_mark : CupertinoIcons.clear),
+                                          color: (_answerList[index].correct ? correctGuess : Colors.red),
+                                        ),
+                                      ],
+                                    );
+                                  }),
+                                ),
+                              ),
+                              const SizedBox(height: 10,),
+                              MaterialButton(
+                                color: correctGuess,
+                                minWidth: double.infinity,
+                                child: const Text("OK"),
+                                onPressed: (() {
+                                  Navigator.of(context).pop();
+                                })
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  );
+                }),
+              ),
+              ListTile(
+                title: const Text(
+                  "About"
+                ),
+                onTap: (() async {
+                  // debugPrint("Open history box");
+                  Navigator.of(context).pop();
+
+                  await showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: const Text(
+                          "About Wxrdle",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: <Widget>[
+                              const Text("Copyright © - 2022 - Adi Martha"),
+                              const Text("GNU GPL License v.3"),
+                              const SizedBox(height: 10,),
+                              InkWell(
+                                child: const Text(
+                                  "https://github.com/billyinferno/wxrdle",
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                onTap: (() {
+                                  launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
+                                }),
+                              ),
+                              const SizedBox(height: 10,),
+                              const Text(
+                                "Word provided by:",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              InkWell(
+                                child: const Text(
+                                  "https://word.tips",
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                onTap: (() {
+                                  launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
+                                }),
+                              ),
+                              const SizedBox(height: 10,),
+                              const Text(
+                                "Definition provided by:",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              InkWell(
+                                child: const Text(
+                                  "https://yourdictionary.com",
+                                  style: TextStyle(
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                                onTap: (() {
+                                  launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
+                                }),
+                              ),
+                              const SizedBox(height: 10,),
+                              MaterialButton(
+                                color: correctGuess,
+                                minWidth: double.infinity,
+                                child: const Text("OK"),
+                                onPressed: (() {
+                                  Navigator.of(context).pop();
+                                }),
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                  );
                 }),
               )
             ],
@@ -395,6 +550,10 @@ class _HomePageState extends State<HomePage> {
                                   context: context,
                                   title: "You Win",
                                   body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
+                                  headword: _defHeadword,
+                                  part: _defPart,
+                                  meaning: _defMeaning,
+                                  url: _defUrl,
                                   callback: resetGame,
                                   enableButton: _enableAllButton
                                 ).then((value) {
@@ -425,6 +584,10 @@ class _HomePageState extends State<HomePage> {
                                     context: context,
                                     title: "You Lose",
                                     body: "Try again next time, correct answer is " + _answer,
+                                    headword: _defHeadword,
+                                    part: _defPart,
+                                    meaning: _defMeaning,
+                                    url: _defUrl,
                                     callback: resetGame,
                                     enableButton: _enableAllButton
                                   ).then((value) {
@@ -516,7 +679,7 @@ class _HomePageState extends State<HomePage> {
               child: Align(
                 alignment: Alignment.center,
                 child: Text(
-                  "Word is provided by https://word.tips/",
+                  "Word is provided by https://word.tips/ - https://yourdictionary.com/",
                   style: TextStyle(
                     fontSize: 10,
                   ),
@@ -617,15 +780,38 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> resetGame() async {
-    await _getWordsFromAPI().then((value) {
+    await _getWordsFromAPI().then((value) async {
       _wordList = value;
 
       _wordList.wordPages[0].wordList.shuffle();
 
       // get the word from API call
       _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
-      _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ 6;
+      
+      // calculate the answer point based on the length of answer
+      _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ _maxAnswer;
+      // check if _answerPoint is below 1
+      if(_answerPoint <= 0) {
+        _answerPoint = 1;
+      }
+
       _guess = "";
+
+      // get the definition
+      await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
+        if(def.data.isNotEmpty) {
+          _defHeadword = def.data[0].headword;
+          _defPart = def.data[0].pos[0].poPart;
+          _defMeaning = def.data[0].pos[0].senses[0].txt;
+          _defUrl = def.data[0].audio;
+        }
+        else {
+          _defHeadword = null;
+          _defPart = null;
+          _defMeaning = null;
+          _defUrl = null;
+        }
+      });
 
       // start from index 0, if index already _maxAnswer we will need to finished the game
       _currentIndex = 0;
