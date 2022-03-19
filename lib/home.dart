@@ -111,518 +111,365 @@ class _HomePageState extends State<HomePage> {
       _buttonWidth = 80;
     }
 
-    return SafeArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Center(
-            child: Text(
-              "Wxrdle",
-              style: TextStyle(
-                color: textColor,
+    // safearea hacks
+    return Container(
+      color: primaryBackground,
+      child: SafeArea(
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Center(
+              child: Text(
+                "Wxrdle",
+                style: TextStyle(
+                  color: textColor,
+                ),
               ),
             ),
-          ),
-          actions: <Widget>[
-            IconButton(
-              icon: const Icon(
-                CupertinoIcons.arrow_counterclockwise
-              ),
-              onPressed: (() async {
-                // put the result as false
-                // generate the answer list and put on the answer list
-                AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-                _answerList.add(_answerData);
-                await _putAnswerList();
-
-                showAlertDialog(
-                  context: context,
-                  title: "Skipped",
-                  body: "Skipped answer is " + _answer,
-                  headword: _defHeadword,
-                  part: _defPart,
-                  meaning: _defMeaning,
-                  url: _defUrl,
-                  callback: resetGame,
-                  enableButton: _enableAllButton
-                ).then((value) async {
-                  setState(() {
-                    _isLoading = false;
+            actions: <Widget>[
+              IconButton(
+                icon: const Icon(
+                  CupertinoIcons.arrow_counterclockwise
+                ),
+                onPressed: (() async {
+                  // put the result as false
+                  // generate the answer list and put on the answer list
+                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                  _answerList.add(_answerData);
+                  await _putAnswerList();
+    
+                  showAlertDialog(
+                    context: context,
+                    title: "Skipped",
+                    body: "Skipped answer is " + _answer,
+                    headword: _defHeadword,
+                    part: _defPart,
+                    meaning: _defMeaning,
+                    url: _defUrl,
+                    callback: resetGame,
+                    enableButton: _enableAllButton
+                  ).then((value) async {
+                    setState(() {
+                      _isLoading = false;
+                    });
                   });
-                });
-              }),
-            ),
-          ],
-        ),
-        drawer: Drawer(
-          child: ListView(
-            children: <Widget>[
-              const SizedBox(
-                height: 80,
-                child: DrawerHeader(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "Menu",
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  )
-                ),
-              ),
-              ListTile(
-                title: const Text(
-                  "Configuration"
-                ),
-                onTap: (() async {
-                  // debugPrint("Open configuration box");
-                  Navigator.of(context).pop();
-
-                  _selectedMaxLength = _maxLength;
-                  _selectedMaxAnswer = _maxAnswer;
-
-                  // show the dialog
-                  await showDialog(
-                    barrierDismissible: false,
-                    context: context,
-                    builder: ((BuildContext context) {
-                      return AlertDialog(
-                        content: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: <Widget>[
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: <Widget>[
-                                  const Expanded(
-                                    child: Text(
-                                      "Configuration",
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    )
-                                  ),
-                                  const SizedBox(width: 10,),
-                                  IconButton(
-                                    onPressed: (() {
-                                      // close the pop up
-                                      Navigator.of(context).pop();
-                                    }),
-                                    icon: const Icon(
-                                      CupertinoIcons.clear,
-                                      color: Colors.white,
-                                    )
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10,),
-                              const Text("Max Length"),
-                              SelectorRange(
-                                selected: _selectedMaxLength,
-                                length: 6,
-                                start: 5,
-                                onSelect: ((value) {
-                                  debugPrint("Value pressed : " + value.toString());
-                                  _selectedMaxLength = value;
-                                })
-                              ),
-                              const SizedBox(height: 20,),
-                              const Text("Max Answer"),
-                              SelectorRange(
-                                selected: _selectedMaxAnswer,
-                                length: 4,
-                                start: 4,
-                                onSelect: ((value) {
-                                  debugPrint("Value pressed : " + value.toString());
-                                  _selectedMaxAnswer = value;
-                                })
-                              ),
-                              const SizedBox(height: 20,),
-                              Center(
-                                child: MaterialButton(
-                                  onPressed: (() async {
-                                    debugPrint("Set the max length " + _selectedMaxLength.toString() + " and max answer " + _selectedMaxAnswer.toString());
-
-                                    _maxAnswer = _selectedMaxAnswer;
-                                    _maxLength = _selectedMaxLength;
-
-                                    await resetGame().then((_) {
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
-                                    });
-
-                                    Navigator.of(context).pop();
-                                  }),
-                                  child: const Text("Apply"),
-                                  color: correctGuess,
-                                  minWidth: double.infinity,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }),
-                  );
                 }),
               ),
-              ListTile(
-                title: const Text(
-                  "History"
-                ),
-                onTap: (() {
-                  // debugPrint("Open history box");
-                  Navigator.of(context).pop();
-
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (BuildContext contex) {
-                      return AlertDialog(
-                        title: const Text(
-                          "History",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: SizedBox(
-                          height: 350,
-                          width: 300,
-                          child: Column(
-                            children: <Widget>[
-                              Expanded(
-                                child: ListView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  children: List<Widget>.generate(_answerList.length, (index) {
-                                    return Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      children: <Widget>[
-                                        Expanded(child: Text(_answerList[index].answer)),
-                                        Icon(
-                                          (_answerList[index].correct ? CupertinoIcons.check_mark : CupertinoIcons.clear),
-                                          color: (_answerList[index].correct ? correctGuess : Colors.red),
-                                        ),
-                                      ],
-                                    );
-                                  }),
-                                ),
-                              ),
-                              const SizedBox(height: 10,),
-                              MaterialButton(
-                                color: correctGuess,
-                                minWidth: double.infinity,
-                                child: const Text("OK"),
-                                onPressed: (() {
-                                  Navigator.of(context).pop();
-                                })
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  );
-                }),
-              ),
-              ListTile(
-                title: const Text(
-                  "About"
-                ),
-                onTap: (() async {
-                  // debugPrint("Open history box");
-                  Navigator.of(context).pop();
-
-                  await showDialog(
-                    context: context,
-                    builder: (BuildContext context) {
-                      return AlertDialog(
-                        title: const Text(
-                          "About Wxrdle",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        content: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: <Widget>[
-                              const Text("Copyright © - 2022 - Adi Martha"),
-                              const Text("GNU GPL License v.3"),
-                              const SizedBox(height: 10,),
-                              InkWell(
-                                child: const Text(
-                                  "https://github.com/billyinferno/wxrdle",
-                                  style: TextStyle(
-                                    decoration: TextDecoration.underline,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                onTap: (() {
-                                  //launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
-                                }),
-                              ),
-                              const SizedBox(height: 10,),
-                              const Text(
-                                "Word provided by:",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              InkWell(
-                                child: const Text(
-                                  "https://word.tips",
-                                  style: TextStyle(
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                                onTap: (() {
-                                  //launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
-                                }),
-                              ),
-                              const SizedBox(height: 10,),
-                              const Text(
-                                "Definition provided by:",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              InkWell(
-                                child: const Text(
-                                  "https://yourdictionary.com",
-                                  style: TextStyle(
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                                onTap: (() {
-                                  //launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
-                                }),
-                              ),
-                              const SizedBox(height: 10,),
-                              MaterialButton(
-                                color: correctGuess,
-                                minWidth: double.infinity,
-                                child: const Text("OK"),
-                                onPressed: (() {
-                                  Navigator.of(context).pop();
-                                }),
-                              )
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                  );
-                }),
-              )
             ],
           ),
-        ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    ...List.generate(_maxAnswer, (index) {
-                      return _wordBox[index]!;
-                    }),
-                    const SizedBox(height: 5,),
-                    Text(
-                      _currentPoint.toString(),
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+          drawer: Drawer(
+            child: ListView(
+              children: <Widget>[
+                const SizedBox(
+                  height: 80,
+                  child: DrawerHeader(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Menu",
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                    )
+                  ),
                 ),
-              ),
+                ListTile(
+                  title: const Text(
+                    "Configuration"
+                  ),
+                  onTap: (() async {
+                    // debugPrint("Open configuration box");
+                    Navigator.of(context).pop();
+    
+                    _selectedMaxLength = _maxLength;
+                    _selectedMaxAnswer = _maxAnswer;
+    
+                    // show the dialog
+                    await showDialog(
+                      barrierDismissible: false,
+                      context: context,
+                      builder: ((BuildContext context) {
+                        return AlertDialog(
+                          content: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: <Widget>[
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: <Widget>[
+                                    const Expanded(
+                                      child: Text(
+                                        "Configuration",
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    ),
+                                    const SizedBox(width: 10,),
+                                    IconButton(
+                                      onPressed: (() {
+                                        // close the pop up
+                                        Navigator.of(context).pop();
+                                      }),
+                                      icon: const Icon(
+                                        CupertinoIcons.clear,
+                                        color: Colors.white,
+                                      )
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 10,),
+                                const Text("Max Length"),
+                                SelectorRange(
+                                  selected: _selectedMaxLength,
+                                  length: 6,
+                                  start: 5,
+                                  onSelect: ((value) {
+                                    debugPrint("Value pressed : " + value.toString());
+                                    _selectedMaxLength = value;
+                                  })
+                                ),
+                                const SizedBox(height: 20,),
+                                const Text("Max Answer"),
+                                SelectorRange(
+                                  selected: _selectedMaxAnswer,
+                                  length: 4,
+                                  start: 4,
+                                  onSelect: ((value) {
+                                    debugPrint("Value pressed : " + value.toString());
+                                    _selectedMaxAnswer = value;
+                                  })
+                                ),
+                                const SizedBox(height: 20,),
+                                Center(
+                                  child: MaterialButton(
+                                    onPressed: (() async {
+                                      debugPrint("Set the max length " + _selectedMaxLength.toString() + " and max answer " + _selectedMaxAnswer.toString());
+    
+                                      _maxAnswer = _selectedMaxAnswer;
+                                      _maxLength = _selectedMaxLength;
+    
+                                      await resetGame().then((_) {
+                                        setState(() {
+                                          _isLoading = false;
+                                        });
+                                      });
+    
+                                      Navigator.of(context).pop();
+                                    }),
+                                    child: const Text("Apply"),
+                                    color: correctGuess,
+                                    minWidth: double.infinity,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    );
+                  }),
+                ),
+                ListTile(
+                  title: const Text(
+                    "History"
+                  ),
+                  onTap: (() {
+                    // debugPrint("Open history box");
+                    Navigator.of(context).pop();
+    
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext contex) {
+                        return AlertDialog(
+                          title: const Text(
+                            "History",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: SizedBox(
+                            height: 350,
+                            width: 300,
+                            child: Column(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ListView(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    children: List<Widget>.generate(_answerList.length, (index) {
+                                      return Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        children: <Widget>[
+                                          Expanded(child: Text(_answerList[index].answer)),
+                                          Icon(
+                                            (_answerList[index].correct ? CupertinoIcons.check_mark : CupertinoIcons.clear),
+                                            color: (_answerList[index].correct ? correctGuess : Colors.red),
+                                          ),
+                                        ],
+                                      );
+                                    }),
+                                  ),
+                                ),
+                                const SizedBox(height: 10,),
+                                MaterialButton(
+                                  color: correctGuess,
+                                  minWidth: double.infinity,
+                                  child: const Text("OK"),
+                                  onPressed: (() {
+                                    Navigator.of(context).pop();
+                                  })
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    );
+                  }),
+                ),
+                ListTile(
+                  title: const Text(
+                    "About"
+                  ),
+                  onTap: (() async {
+                    // debugPrint("Open history box");
+                    Navigator.of(context).pop();
+    
+                    await showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          title: const Text(
+                            "About Wxrdle",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: <Widget>[
+                                const Text("Copyright © - 2022 - Adi Martha"),
+                                const Text("GNU GPL License v.3"),
+                                const SizedBox(height: 10,),
+                                InkWell(
+                                  child: const Text(
+                                    "https://github.com/billyinferno/wxrdle",
+                                    style: TextStyle(
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                  onTap: (() {
+                                    //launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
+                                  }),
+                                ),
+                                const SizedBox(height: 10,),
+                                const Text(
+                                  "Word provided by:",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                InkWell(
+                                  child: const Text(
+                                    "https://word.tips",
+                                    style: TextStyle(
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                  onTap: (() {
+                                    //launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
+                                  }),
+                                ),
+                                const SizedBox(height: 10,),
+                                const Text(
+                                  "Definition provided by:",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                InkWell(
+                                  child: const Text(
+                                    "https://yourdictionary.com",
+                                    style: TextStyle(
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                  onTap: (() {
+                                    //launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
+                                  }),
+                                ),
+                                const SizedBox(height: 10,),
+                                MaterialButton(
+                                  color: correctGuess,
+                                  minWidth: double.infinity,
+                                  child: const Text("OK"),
+                                  onPressed: (() {
+                                    Navigator.of(context).pop();
+                                  }),
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    );
+                  }),
+                )
+              ],
             ),
-            Container(
-              height: 160,
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-              width: double.infinity,
-              child: Column(
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(10, (index) {
-                      return KeyboardButton(
-                        enabled: _keyboardState[0]![index],
-                        char: _keyboardRow[0]![index],
-                        onPress: ((value) {
-                          // check if the current guess length < than max length
-                          if(_guess.length < _maxLength) {
-                            // debugPrint(value);
-                            // set the current guess
-                            _guess = _guess + value;
-                            // now change the wordbox on current index
-                            setState(() {
-                              _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                            });
-                          }
-                        })
-                      );
-                    }),
-                  ),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(9, (index) {
-                      return KeyboardButton(
-                        char: _keyboardRow[1]![index],
-                        enabled: _keyboardState[1]![index],
-                        onPress: ((value) {
-                          // check if the current guess length < than max length
-                          if(_guess.length < _maxLength) {
-                            // debugPrint(value);
-                            // set the current guess
-                            _guess = _guess + value;
-                            // now change the wordbox on current index
-                            setState(() {
-                              _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                            });
-                          }
-                        })
-                      );
-                    }),
-                  ),
-                  Row(
+          ),
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      SizedBox(
-                        height: 50,
-                        width: _buttonWidth,
-                        child: InkWell(
-                          onTap: () async {
-                            // debugPrint("Enter");
-                            if(_guess.length == _maxLength) {
-                              // check the answer
-                              _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
-
-                              // loop thru the guess and see if there are character that not on the answer
-                              String _currGuess;
-                              int _currPos;
-                              for(int i = 0; i < _guess.length; i++) {
-                                _currGuess = _guess.substring(i, i+1);
-                                _currPos = _answer.indexOf(_currGuess);
-                                if(_currPos < 0) {
-                                  // wrong answer disabled button
-                                  _disableButton(_currGuess);
-                                }
-                              }
-
-                              // check if the answer correct or not?
-                              if(_answer == _guess) {
-                                // add point
-                                _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
-                                _currentPoint = _currentPoint + _pointGot;
-
-                                // stored the current point to the box
-                                await LocalBox.put(key: 'current_point', value: _currentPoint);
-
-                                // generate the answer list and put on the answer list
-                                AnswerList _answerData = AnswerList(answer: _answer, correct: true);
-                                _answerList.add(_answerData);
-                                await _putAnswerList();
-
-                                // show dialog, and reset game
-                                showAlertDialog(
-                                  context: context,
-                                  title: "You Win",
-                                  body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
-                                  headword: _defHeadword,
-                                  part: _defPart,
-                                  meaning: _defMeaning,
-                                  url: _defUrl,
-                                  callback: resetGame,
-                                  enableButton: _enableAllButton
-                                ).then((value) {
-                                  // just set state
-                                  setState(() {
-                                    _isLoading = false;
-                                  });
-                                });
-                              }
-                              else {
-                                // next current index
-                                if(_currentIndex < (_maxAnswer - 1)) {
-                                  setState(() {
-                                    // next index
-                                    _currentIndex = _currentIndex + 1;
- 
-                                    // clear the guess
-                                    _guess = "";
-                                  });
-                                }
-                                else {
-                                  // generate the answer list and put on the answer list
-                                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-                                  _answerList.add(_answerData);
-                                  await _putAnswerList();
-
-                                  showAlertDialog(
-                                    context: context,
-                                    title: "You Lose",
-                                    body: "Try again next time, correct answer is " + _answer,
-                                    headword: _defHeadword,
-                                    part: _defPart,
-                                    meaning: _defMeaning,
-                                    url: _defUrl,
-                                    callback: resetGame,
-                                    enableButton: _enableAllButton
-                                  ).then((value) {
-                                    // just set state
-                                    setState(() {
-                                      _isLoading = false;
-                                    });
-                                  });
-                                }
-                              }
-                            }
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: buttonBackground,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            margin: const EdgeInsets.all(2),
-                            child: const Align(
-                              alignment: Alignment.center,
-                              child: Text(
-                                "ENTER",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: textColor
-                                ),
-                              ),
-                            ),
-                          ),
+                      ...List.generate(_maxAnswer, (index) {
+                        return _wordBox[index]!;
+                      }),
+                      const SizedBox(height: 5,),
+                      Text(
+                        _currentPoint.toString(),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                      ...List.generate(7, (index) {
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                height: 160,
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                width: double.infinity,
+                child: Column(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(10, (index) {
                         return KeyboardButton(
-                          char: _keyboardRow[2]![index],
-                          enabled: _keyboardState[2]![index],
+                          enabled: _keyboardState[0]![index],
+                          char: _keyboardRow[0]![index],
                           onPress: ((value) {
                             // check if the current guess length < than max length
                             if(_guess.length < _maxLength) {
@@ -637,55 +484,212 @@ class _HomePageState extends State<HomePage> {
                           })
                         );
                       }),
-                      SizedBox(
-                        height: 50,
-                        width: _buttonWidth,
-                        child: InkWell(
-                          onTap: () {
-                            // debugPrint("Delete");
-                            if(_guess.isNotEmpty) {
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(9, (index) {
+                        return KeyboardButton(
+                          char: _keyboardRow[1]![index],
+                          enabled: _keyboardState[1]![index],
+                          onPress: ((value) {
+                            // check if the current guess length < than max length
+                            if(_guess.length < _maxLength) {
                               // debugPrint(value);
                               // set the current guess
-                              _guess = _guess.substring(0, _guess.length - 1);
+                              _guess = _guess + value;
                               // now change the wordbox on current index
                               setState(() {
                                 _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
                               });
                             }
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: buttonBackground,
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                            margin: const EdgeInsets.all(2),
-                            child: const Align(
-                              alignment: Alignment.center,
-                              child: Icon(
-                                CupertinoIcons.delete_left
+                          })
+                        );
+                      }),
+                    ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        SizedBox(
+                          height: 50,
+                          width: _buttonWidth,
+                          child: InkWell(
+                            onTap: () async {
+                              // debugPrint("Enter");
+                              if(_guess.length == _maxLength) {
+                                // check the answer
+                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, checkAnswer: true, length: _maxLength,);
+    
+                                // loop thru the guess and see if there are character that not on the answer
+                                String _currGuess;
+                                int _currPos;
+                                for(int i = 0; i < _guess.length; i++) {
+                                  _currGuess = _guess.substring(i, i+1);
+                                  _currPos = _answer.indexOf(_currGuess);
+                                  if(_currPos < 0) {
+                                    // wrong answer disabled button
+                                    _disableButton(_currGuess);
+                                  }
+                                }
+    
+                                // check if the answer correct or not?
+                                if(_answer == _guess) {
+                                  // add point
+                                  _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
+                                  _currentPoint = _currentPoint + _pointGot;
+    
+                                  // stored the current point to the box
+                                  await LocalBox.put(key: 'current_point', value: _currentPoint);
+    
+                                  // generate the answer list and put on the answer list
+                                  AnswerList _answerData = AnswerList(answer: _answer, correct: true);
+                                  _answerList.add(_answerData);
+                                  await _putAnswerList();
+    
+                                  // show dialog, and reset game
+                                  showAlertDialog(
+                                    context: context,
+                                    title: "You Win",
+                                    body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
+                                    headword: _defHeadword,
+                                    part: _defPart,
+                                    meaning: _defMeaning,
+                                    url: _defUrl,
+                                    callback: resetGame,
+                                    enableButton: _enableAllButton
+                                  ).then((value) {
+                                    // just set state
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  });
+                                }
+                                else {
+                                  // next current index
+                                  if(_currentIndex < (_maxAnswer - 1)) {
+                                    setState(() {
+                                      // next index
+                                      _currentIndex = _currentIndex + 1;
+     
+                                      // clear the guess
+                                      _guess = "";
+                                    });
+                                  }
+                                  else {
+                                    // generate the answer list and put on the answer list
+                                    AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                    _answerList.add(_answerData);
+                                    await _putAnswerList();
+    
+                                    showAlertDialog(
+                                      context: context,
+                                      title: "You Lose",
+                                      body: "Try again next time, correct answer is " + _answer,
+                                      headword: _defHeadword,
+                                      part: _defPart,
+                                      meaning: _defMeaning,
+                                      url: _defUrl,
+                                      callback: resetGame,
+                                      enableButton: _enableAllButton
+                                    ).then((value) {
+                                      // just set state
+                                      setState(() {
+                                        _isLoading = false;
+                                      });
+                                    });
+                                  }
+                                }
+                              }
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: buttonBackground,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              margin: const EdgeInsets.all(2),
+                              child: const Align(
+                                alignment: Alignment.center,
+                                child: Text(
+                                  "ENTER",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: textColor
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        ...List.generate(7, (index) {
+                          return KeyboardButton(
+                            char: _keyboardRow[2]![index],
+                            enabled: _keyboardState[2]![index],
+                            onPress: ((value) {
+                              // check if the current guess length < than max length
+                              if(_guess.length < _maxLength) {
+                                // debugPrint(value);
+                                // set the current guess
+                                _guess = _guess + value;
+                                // now change the wordbox on current index
+                                setState(() {
+                                  _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                                });
+                              }
+                            })
+                          );
+                        }),
+                        SizedBox(
+                          height: 50,
+                          width: _buttonWidth,
+                          child: InkWell(
+                            onTap: () {
+                              // debugPrint("Delete");
+                              if(_guess.isNotEmpty) {
+                                // debugPrint(value);
+                                // set the current guess
+                                _guess = _guess.substring(0, _guess.length - 1);
+                                // now change the wordbox on current index
+                                setState(() {
+                                  _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                                });
+                              }
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: buttonBackground,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              margin: const EdgeInsets.all(2),
+                              child: const Align(
+                                alignment: Alignment.center,
+                                child: Icon(
+                                  CupertinoIcons.delete_left
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(
-              height: 20,
-              child: Align(
-                alignment: Alignment.center,
-                child: Text(
-                  "Word is provided by https://word.tips/ - https://yourdictionary.com/",
-                  style: TextStyle(
-                    fontSize: 10,
+              const SizedBox(
+                height: 20,
+                child: Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    "Word is provided by https://word.tips/ - https://yourdictionary.com/",
+                    style: TextStyle(
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
