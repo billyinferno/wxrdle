@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/answer_list.dart';
+import 'package:wxrdle/model/save_state_model.dart';
 import 'package:wxrdle/model/word_list.dart';
 import 'package:wxrdle/storage/local_box.dart';
 import 'package:wxrdle/utils/show_alert_dialog.dart';
@@ -53,6 +54,7 @@ class _HomePageState extends State<HomePage> {
   late int _selectedMaxAnswer;
 
   late List<AnswerList> _answerList;
+  late Map<int, AnswerList> _currentAnswerList;
   late Map<String, int> _keyboardResult;
   bool _isLoading = true;
 
@@ -60,8 +62,12 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
+    // assuming current index is 0
+    _currentIndex = 0;
+
     // initialize answer list
     _answerList = [];
+    _currentAnswerList = {};
 
     // get the max length and answer from settings
     _maxLength = 5;
@@ -77,11 +83,7 @@ class _HomePageState extends State<HomePage> {
       await _getConfiguration();
       await _getCurrentPoint();
       await _getAnswerList();
-      await resetGame().then((_) {
-        setState(() {
-          _isLoading = false;
-        });
-      });
+      await _checkState();
     });
   }
 
@@ -146,7 +148,7 @@ class _HomePageState extends State<HomePage> {
                     part: _defPart,
                     meaning: _defMeaning,
                     url: _defUrl,
-                    callback: resetGame,
+                    callback: _resetGame,
                     enableButton: _enableAllButton
                   ).then((value) async {
                     setState(() {
@@ -255,7 +257,7 @@ class _HomePageState extends State<HomePage> {
                                       _maxAnswer = _selectedMaxAnswer;
                                       _maxLength = _selectedMaxLength;
     
-                                      await resetGame().then((_) {
+                                      await _resetGame().then((_) {
                                         setState(() {
                                           _isLoading = false;
                                         });
@@ -525,6 +527,9 @@ class _HomePageState extends State<HomePage> {
                                     _disableButton(char, status);
                                   });
 
+                                  // save state once we add the current answer list and update the keyboard state
+                                  await _saveState();
+
                                   // check if the answer correct or not?
                                   if(_answer == _guess) {
                                     // add point
@@ -548,7 +553,7 @@ class _HomePageState extends State<HomePage> {
                                       part: _defPart,
                                       meaning: _defMeaning,
                                       url: _defUrl,
-                                      callback: resetGame,
+                                      callback: _resetGame,
                                       enableButton: _enableAllButton
                                     ).then((value) {
                                       // just set state
@@ -582,7 +587,7 @@ class _HomePageState extends State<HomePage> {
                                         part: _defPart,
                                         meaning: _defMeaning,
                                         url: _defUrl,
-                                        callback: resetGame,
+                                        callback: _resetGame,
                                         enableButton: _enableAllButton
                                       ).then((value) {
                                         // just set state
@@ -697,6 +702,9 @@ class _HomePageState extends State<HomePage> {
       length: _maxLength,
     );
 
+    AnswerList _currentAnswerData = AnswerList(answer: _guess, correct: (_answer == _guess));
+    _currentAnswerList[_currentIndex] = _currentAnswerData;
+
     String _tempAnswer = _answer;
     String _currGuess = "";
     String _currAnswer = "";
@@ -732,10 +740,6 @@ class _HomePageState extends State<HomePage> {
         }
       }
     }
-
-    // _keyboardResult.forEach((key, value) {
-    //   debugPrint(key + " -> " + value.toString());
-    // });
   }
 
   void _disableButton(String char, int status) {
@@ -803,8 +807,8 @@ class _HomePageState extends State<HomePage> {
     // check if this is not null?
     if(_boxAnswerList != null) {
       // this is list of answer, so convert this dynamic to list of string
-      List<String> _currentAnswerList = List<String>.from(_boxAnswerList);
-      for (String _currentList in _currentAnswerList) {
+      List<String> _currAnswerList = List<String>.from(_boxAnswerList);
+      for (String _currentList in _currAnswerList) {
         // convert this to answer list model
         AnswerList _answer = AnswerList.fromJson(jsonDecode(_currentList));
         // add this to the answer list
@@ -825,7 +829,7 @@ class _HomePageState extends State<HomePage> {
     await LocalBox.put(key: 'answer_list', value: _listOfAnswer);
   }
 
-  Future<void> resetGame() async {
+  Future<void> _resetGame() async {
     await _getWordsFromAPI().then((value) async {
       _wordList = value;
 
@@ -843,6 +847,10 @@ class _HomePageState extends State<HomePage> {
 
       _guess = "";
       _keyboardResult = {};
+      _currentAnswerList = {};
+
+      // save the state as reset
+      await _saveState(isReset: true);
 
       // get the definition
       await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
@@ -899,5 +907,121 @@ class _HomePageState extends State<HomePage> {
     }
 
     return _result;
+  }
+
+  Future<void> _checkState() async {
+    await _loadState().then((res) async {
+      if(res) {
+        // this means that the game already have previous state
+        debugPrint("🔃 Load previous state");
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      else {
+        await _resetGame().then((_) {
+          setState(() {
+            _isLoading = false;
+          });
+        });
+      }
+    });
+  }
+
+  Future<bool> _loadState() async {
+    // load should be only performed when we first load the app
+    // otherwise we will just perform save state.
+    // in case the savestate is null, then no need to perform anything.
+    String? _saveString = LocalBox.get(key: 'save_state');
+    if(_saveString != null) {
+      // save string is not null, means we already have save state
+      // parse this save string as SaveStateModel
+      SaveStateModel _save = SaveStateModel.fromJson(jsonDecode(_saveString));
+      
+      // we got the save state, now we need to change the current index, etc.
+      _currentIndex = _save.currentIndex;
+
+      // set the answer to the one that we put on the save state
+      _answer = _save.answer;
+      _answerPoint = _save.answerPoints;
+
+      // set the definition
+      _defHeadword = _save.defHeadword;
+      _defMeaning = _save.defMeaning;
+      _defPart = _save.defPart;
+      _defUrl = _save.defUrl;
+
+      _guess = "";
+      _keyboardResult = {};
+      _currentAnswerList = {};
+
+      // then we need to change the keyboard state
+      for (KeyboardMap _kMap in _save.keyboardMap) {
+        _keyboardState[_kMap.id] = _kMap.map;
+        for(int i = 0; i < _keyboardRow[_kMap.id]!.length; i++) {
+          _keyboardResult[_keyboardRow[_kMap.id]![i]] = _kMap.map[i];
+        }
+      }
+
+      // generate word box widget and put onto _wordBox
+      _wordBox.clear();
+      for(int i=0; i<_maxAnswer; i++) {
+        _wordBox[i] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+      }
+
+      // then after that we need to generate a correct word box for each box
+      // that already answered
+      int i = 0;
+      for (SaveAnswerList _ans in _save.answerList) {
+        _wordBox[i] = WordBox(answer: _save.answer, guess: _ans.answer, checkAnswer: true, length: _maxLength,);
+        _currentAnswerList[i] = AnswerList(answer: _ans.answer, correct: _ans.result);
+        i = i + 1;
+      }
+
+      return true;
+    }
+    else {
+      return false;
+    }
+  }
+
+  Future<void> _saveState({bool? isReset}) async {
+    // check if this is reset or not?
+    // if reset, then we just stored null on the storage
+    bool _isReset = (isReset ?? false);
+
+    if(_isReset) {
+      LocalBox.put(key: 'save_state', value: null);
+    }
+    else {
+      List<KeyboardMap> _kMap = [];
+
+      // loop thru _keyboardState
+      _keyboardState.forEach((key, value) {
+        _kMap.add(KeyboardMap(id: key, map: _keyboardState[key]!));
+      });
+
+      // loop thru current answer list
+      List<SaveAnswerList> _sAnswer = [];
+      _currentAnswerList.forEach((key, value) {
+        _sAnswer.add(SaveAnswerList(answer: _currentAnswerList[key]!.answer, result: _currentAnswerList[key]!.correct));
+      });
+
+      // generate the save state for this
+      SaveStateModel _save = SaveStateModel(
+        currentIndex: (_currentIndex + 1),
+        answer: _answer,
+        answerPoints: _answerPoint,
+        answerList: _sAnswer,
+        defHeadword: _defHeadword,
+        defMeaning: _defMeaning,
+        defPart: _defPart,
+        defUrl: _defUrl,
+        keyboardMap: _kMap
+      );
+
+      // save to local storage
+      LocalBox.put(key: 'save_state', value: jsonEncode(_save.toJson()));
+    }
   }
 }
