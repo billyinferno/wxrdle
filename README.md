@@ -3,7 +3,8 @@
 Worlde but on Steroid
 
 ## Note
-All the word is pulled from www.wordfinderapi.com.
+All the word is pulled from https://word.tips.
+All the definition is pulled from https://yourdictionary.com.
 
 ## Description
 Has ability to change the length of the wordle, for you that want some extreme challenge.
