@@ -57,6 +57,7 @@ class _HomePageState extends State<HomePage> {
   late Map<int, AnswerList> _currentAnswerList;
   late Map<String, int> _keyboardResult;
   bool _isLoading = true;
+  bool _errorGetWord = false;
 
   @override
   void initState() {
@@ -103,7 +104,49 @@ class _HomePageState extends State<HomePage> {
       );
     }
     else {
-      return _wordle();
+      if(_errorGetWord) {
+        return Scaffold(
+          body: Center(
+            child: Container(
+              height: 200,
+              margin: const EdgeInsets.all(20),
+              color: Colors.grey[800],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  const Icon(
+                    CupertinoIcons.xmark_circle_fill,
+                    color: Colors.red,
+                    size: 35,
+                  ),
+                  const SizedBox(height: 10,),
+                  const Text("Error when get words from API."),
+                  const Text("Please wait a moment, and try refresh again"),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    child: MaterialButton(
+                      color: correctGuess,
+                      minWidth: double.infinity,
+                      onPressed: () async {
+                        await _resetGame().then((value) {
+                          if(value) {
+                            _enableAllButton();
+                          }
+                        });
+                      },
+                      child: const Text("Refresh"),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
+      else {
+        return _wordle();
+      }
     }
   }
 
@@ -829,54 +872,76 @@ class _HomePageState extends State<HomePage> {
     await LocalBox.put(key: 'answer_list', value: _listOfAnswer);
   }
 
-  Future<void> _resetGame() async {
-    await _getWordsFromAPI().then((value) async {
-      _wordList = value;
+  Future<bool> _resetGame() async {
+    try {
+      await _getWordsFromAPI().then((value) async {
+        _wordList = value;
 
-      _wordList.wordPages[0].wordList.shuffle();
+        _wordList.wordPages[0].wordList.shuffle();
 
-      // get the word from API call
-      _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
-      
-      // calculate the answer point based on the length of answer
-      _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ _maxAnswer;
-      // check if _answerPoint is below 1
-      if(_answerPoint <= 0) {
-        _answerPoint = 1;
-      }
-
-      _guess = "";
-      _keyboardResult = {};
-      _currentAnswerList = {};
-
-      // save the state as reset
-      await _saveState(isReset: true);
-
-      // get the definition
-      await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
-        if(def.data.isNotEmpty) {
-          _defHeadword = def.data[0].headword;
-          _defPart = def.data[0].pos[0].poPart;
-          _defMeaning = def.data[0].pos[0].senses[0].txt;
-          _defUrl = def.data[0].audio;
+        // get the word from API call
+        _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
+        
+        // calculate the answer point based on the length of answer
+        _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ _maxAnswer;
+        // check if _answerPoint is below 1
+        if(_answerPoint <= 0) {
+          _answerPoint = 1;
         }
-        else {
+
+        _guess = "";
+        _keyboardResult = {};
+        _currentAnswerList = {};
+
+        // save the state as reset
+        await _saveState(isReset: true);
+
+        // get the definition
+        try {
+          await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
+            if(def.data.isNotEmpty) {
+              _defHeadword = def.data[0].headword;
+              _defPart = def.data[0].pos[0].poPart;
+              _defMeaning = def.data[0].pos[0].senses[0].txt;
+              _defUrl = def.data[0].audio;
+            }
+            else {
+              _defHeadword = null;
+              _defPart = null;
+              _defMeaning = null;
+              _defUrl = null;
+            }
+          });
+        }
+        catch(e) {
+          debugPrint("⚠️ " + e.toString());
+          // defaulted this to null
           _defHeadword = null;
           _defPart = null;
           _defMeaning = null;
           _defUrl = null;
         }
+
+        // start from index 0, if index already _maxAnswer we will need to finished the game
+        _currentIndex = 0;
+
+        // generate word box widget and put onto _wordBox
+        _wordBox.clear();
+        for(int i=0; i<_maxAnswer; i++) {
+          _wordBox[i] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+        }
       });
 
-      // start from index 0, if index already _maxAnswer we will need to finished the game
-      _currentIndex = 0;
-
-      // generate word box widget and put onto _wordBox
-      _wordBox.clear();
-      for(int i=0; i<_maxAnswer; i++) {
-        _wordBox[i] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-      }
-    });
+      // set the error get word into false, since we already got word we need to play
+      _errorGetWord = false;
+      return true;
+    }
+    catch(e) {
+      debugPrint("⚠️ " + e.toString());
+      // unable to get word from API showed the error message
+      _errorGetWord = true;
+      return false;
+    }
   }
 
   Future<WordList> _getWordsFromAPI() async {
@@ -896,14 +961,19 @@ class _HomePageState extends State<HomePage> {
       
       _alphabet.shuffle(_random);
       _endChar = _alphabet[0];
-      
-      await _getWordsAPI.getWords(
-        length: _maxLength,
-        startChar: _firstChar,
-        endChar: _endChar,
-      ).then((resp) {
-        _result = resp;
-      });
+
+      try {
+        await _getWordsAPI.getWords(
+          length: _maxLength,
+          startChar: _firstChar,
+          endChar: _endChar,
+        ).then((resp) {
+          _result = resp;
+        });
+      }
+      catch(e) {
+        throw Exception("Error when get words from API");
+      }
     }
 
     return _result;
