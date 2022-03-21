@@ -770,13 +770,9 @@ class _HomePageState extends State<HomePage> {
                               margin: const EdgeInsets.all(2),
                               child: const Align(
                                 alignment: Alignment.center,
-                                child: Text(
-                                  "ENTER",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: textColor
-                                  ),
+                                child: Icon(
+                                  CupertinoIcons.check_mark,
+                                  size: 15,
                                 ),
                               ),
                             ),
@@ -825,7 +821,8 @@ class _HomePageState extends State<HomePage> {
                               child: const Align(
                                 alignment: Alignment.center,
                                 child: Icon(
-                                  CupertinoIcons.delete_left
+                                  CupertinoIcons.delete_left,
+                                  size: 15,
                                 ),
                               ),
                             ),
