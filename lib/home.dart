@@ -9,6 +9,7 @@ import 'package:wxrdle/model/save_state_model.dart';
 import 'package:wxrdle/model/word_list.dart';
 import 'package:wxrdle/storage/local_box.dart';
 import 'package:wxrdle/utils/show_alert_dialog.dart';
+import 'package:wxrdle/widgets/game_selector.dart';
 import 'package:wxrdle/widgets/keyboard_button.dart';
 import 'package:wxrdle/widgets/selector_range.dart';
 import 'package:wxrdle/widgets/word_box.dart';
@@ -34,9 +35,20 @@ class _HomePageState extends State<HomePage> {
     1:[1,1,1,1,1,1,1,1,1],
     2:[1,1,1,1,1,1,1],
   };
+  final Map<int, String> _gameType = {
+    0:"Easy Mode",
+    1:"Continues",
+    2:"Survival",
+  };
+  final Map<int, int> _gameHighScore = {
+    0:0,
+    1:0,
+    2:0,
+  };
 
   late Map<int, Widget> _wordBox;
   late int _currentIndex;
+  late int _currentGameMode;
   late String _answer;
   late int _answerPoint;
   late int _pointGot;
@@ -52,6 +64,7 @@ class _HomePageState extends State<HomePage> {
   late double _buttonWidth;
   late int _selectedMaxLength;
   late int _selectedMaxAnswer;
+  late int _selectedGameMode;
 
   late List<AnswerList> _answerList;
   late Map<int, AnswerList> _currentAnswerList;
@@ -65,6 +78,9 @@ class _HomePageState extends State<HomePage> {
 
     // assuming current index is 0
     _currentIndex = 0;
+
+    // assuming that the current game mode is easy mode
+    _currentGameMode = 0;
 
     // initialize answer list
     _answerList = [];
@@ -177,6 +193,9 @@ class _HomePageState extends State<HomePage> {
                   CupertinoIcons.arrow_counterclockwise
                 ),
                 onPressed: (() async {
+                  // update the score
+                  _updateScore(false);
+
                   // put the result as false
                   // generate the answer list and put on the answer list
                   AnswerList _answerData = AnswerList(answer: _answer, correct: false);
@@ -230,6 +249,7 @@ class _HomePageState extends State<HomePage> {
     
                     _selectedMaxLength = _maxLength;
                     _selectedMaxAnswer = _maxAnswer;
+                    _selectedGameMode = _currentGameMode;
     
                     // show the dialog
                     await showDialog(
@@ -276,7 +296,6 @@ class _HomePageState extends State<HomePage> {
                                   length: 6,
                                   start: 5,
                                   onSelect: ((value) {
-                                    debugPrint("Value pressed : " + value.toString());
                                     _selectedMaxLength = value;
                                   })
                                 ),
@@ -287,11 +306,19 @@ class _HomePageState extends State<HomePage> {
                                   length: 4,
                                   start: 4,
                                   onSelect: ((value) {
-                                    debugPrint("Value pressed : " + value.toString());
                                     _selectedMaxAnswer = value;
                                   })
                                 ),
                                 const SizedBox(height: 20,),
+                                const Text("Game Type"),
+                                GameSelector(
+                                  selectedGameMode: _selectedGameMode,
+                                  gameType: _gameType,
+                                  onSelect: (value) {
+                                    _selectedGameMode = value;
+                                  }
+                                ),
+                                const SizedBox(height: 10,),
                                 Center(
                                   child: MaterialButton(
                                     onPressed: (() async {
@@ -299,8 +326,19 @@ class _HomePageState extends State<HomePage> {
     
                                       _maxAnswer = _selectedMaxAnswer;
                                       _maxLength = _selectedMaxLength;
+                                      _currentGameMode = _selectedGameMode;
+
+                                      // if user press apply, we will assuming all will be reset
+                                      // so reset the current point into 0 again
+                                      _currentPoint = 0;
+
+                                      // save the configuration
+                                      await _saveConfiguration();
     
                                       await _resetGame().then((_) {
+                                        // enable all button before we refresh the state
+                                        _enableAllButton();
+
                                         setState(() {
                                           _isLoading = false;
                                         });
@@ -363,6 +401,65 @@ class _HomePageState extends State<HomePage> {
                                     }),
                                   ),
                                 ),
+                                const SizedBox(height: 10,),
+                                MaterialButton(
+                                  color: correctGuess,
+                                  minWidth: double.infinity,
+                                  child: const Text("OK"),
+                                  onPressed: (() {
+                                    Navigator.of(context).pop();
+                                  })
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                    );
+                  }),
+                ),
+                ListTile(
+                  title: const Text(
+                    "High Score"
+                  ),
+                  onTap: (() {
+                    // debugPrint("Open history box");
+                    Navigator.of(context).pop();
+    
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (BuildContext contex) {
+                        return AlertDialog(
+                          title: const Text(
+                            "High Score",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          content: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: <Widget>[
+                                ...List<Widget>.generate(_gameHighScore.length, (index) {
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: <Widget>[
+                                      Expanded(child: Text(_gameType[index]!)),
+                                      const SizedBox(width: 10,),
+                                      Text(
+                                        _gameHighScore[index]!.toString(),
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: correctGuess,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }),
                                 const SizedBox(height: 10,),
                                 MaterialButton(
                                   color: correctGuess,
@@ -494,12 +591,28 @@ class _HomePageState extends State<HomePage> {
                         return _wordBox[index]!;
                       }),
                       const SizedBox(height: 5,),
-                      Text(
-                        _currentPoint.toString(),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Text(
+                            _currentPoint.toString(),
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: (_currentPoint == _gameHighScore[_currentGameMode]! ? correctGuess : locationGuess),
+                            ),
+                          ),
+                          const SizedBox(width: 5,),
+                          Text(
+                            "(" + _gameHighScore[_currentGameMode]!.toString() + ")",
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: correctGuess,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -582,6 +695,9 @@ class _HomePageState extends State<HomePage> {
                                     // stored the current point to the box
                                     await LocalBox.put(key: 'current_point', value: _currentPoint);
 
+                                    // update the score
+                                    _updateScore(true);
+
                                     // generate the answer list and put on the answer list
                                     AnswerList _answerData = AnswerList(answer: _answer, correct: true);
                                     _answerList.add(_answerData);
@@ -617,6 +733,9 @@ class _HomePageState extends State<HomePage> {
                                       });
                                     }
                                     else {
+                                      // update the score
+                                      _updateScore(false);
+
                                       // generate the answer list and put on the answer list
                                       AnswerList _answerData = AnswerList(answer: _answer, correct: false);
                                       _answerList.add(_answerData);
@@ -806,25 +925,68 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  Future<void> _saveConfiguration() async {
+    await LocalBox.put(key: 'max_length', value: _maxLength);
+    await LocalBox.put(key: 'max_answer', value: _maxAnswer);
+    await LocalBox.put(key: 'game_mode', value: _currentGameMode);
+    await LocalBox.put(key: 'current_point', value: _currentPoint);
+  }
+
   Future<void> _getConfiguration() async {
     int? _currentMaxLength;
     int? _currentMaxAnswer;
+    int? _currentConfigGameMode;
+    int? _currentHighScore;
 
     _currentMaxLength = LocalBox.get(key: 'max_length');
     _currentMaxAnswer = LocalBox.get(key: 'max_answer');
+    _currentConfigGameMode = LocalBox.get(key: 'game_mode');
 
     if(_currentMaxLength == null) {
-      LocalBox.put(key: 'max_length', value: _maxLength);
+      await LocalBox.put(key: 'max_length', value: _maxLength);
     }
     else {
       _maxLength = _currentMaxLength;
     }
 
     if(_currentMaxAnswer == null) {
-      LocalBox.put(key: 'max_answer', value: _maxAnswer);
+      await LocalBox.put(key: 'max_answer', value: _maxAnswer);
     }
     else {
       _maxAnswer = _currentMaxAnswer;
+    }
+
+    if(_currentConfigGameMode == null) {
+      await LocalBox.put(key: 'game_mode', value: _currentGameMode);
+    }
+    else {
+      _currentGameMode = _currentConfigGameMode;
+    }
+
+    // get high score for all mode
+    // mode - 0
+    _currentHighScore = LocalBox.get(key: 'high_score_0');
+    if(_currentHighScore == null) {
+      await LocalBox.put(key: 'high_score_0', value: _gameHighScore[0]);
+    }
+    else {
+      _gameHighScore[0] = _currentHighScore;
+    }
+    // mode - 1
+    _currentHighScore = LocalBox.get(key: 'high_score_1');
+    if(_currentHighScore == null) {
+      await LocalBox.put(key: 'high_score_1', value: _gameHighScore[1]);
+    }
+    else {
+      _gameHighScore[1] = _currentHighScore;
+    }
+    // mode - 2
+    _currentHighScore = LocalBox.get(key: 'high_score_2');
+    if(_currentHighScore == null) {
+      await LocalBox.put(key: 'high_score_2', value: _gameHighScore[2]);
+    }
+    else {
+      _gameHighScore[2] = _currentHighScore;
     }
   }
 
@@ -835,7 +997,7 @@ class _HomePageState extends State<HomePage> {
     // check if _currentPointOnBox is null or not?
     if(_currentPointOnBox == null) {
       // put the current point as 0 on the box
-      LocalBox.put(key: 'current_point', value: 0);
+      await LocalBox.put(key: 'current_point', value: 0);
     }
     else {
       // put the current point on box to _currentPoint
@@ -990,6 +1152,10 @@ class _HomePageState extends State<HomePage> {
       }
       else {
         await _resetGame().then((_) {
+          // ensure to enable all the button before we refresh the state
+          _enableAllButton();
+
+          // refresh the application state
           setState(() {
             _isLoading = false;
           });
@@ -1061,7 +1227,7 @@ class _HomePageState extends State<HomePage> {
     bool _isReset = (isReset ?? false);
 
     if(_isReset) {
-      LocalBox.put(key: 'save_state', value: null);
+      await LocalBox.put(key: 'save_state', value: null);
     }
     else {
       List<KeyboardMap> _kMap = [];
@@ -1091,7 +1257,31 @@ class _HomePageState extends State<HomePage> {
       );
 
       // save to local storage
-      LocalBox.put(key: 'save_state', value: jsonEncode(_save.toJson()));
+      await LocalBox.put(key: 'save_state', value: jsonEncode(_save.toJson()));
+    }
+  }
+
+  void _updateScore(bool isWin) async {
+    int _currentHighScore = _gameHighScore[_currentGameMode]!;
+
+    if(!isWin) {
+      // check the game mode
+      if(_currentGameMode == 1) {
+        // this is continues so we will minus the currentPoint with answerPoint
+        _currentPoint = _currentPoint - _answerPoint;
+      }
+      else if(_currentGameMode == 2) {
+        // reset the current point into 0
+        _currentPoint = 0;
+      }
+    }
+
+    // check if current point more than high score or not?
+    // if more then save the current point
+    if(_currentPoint > _currentHighScore) {
+      // put this on the local storage
+      _gameHighScore[_currentGameMode] = _currentPoint;
+      await LocalBox.put(key: 'high_score_' + _currentGameMode.toString(), value: _currentPoint);
     }
   }
 }
