@@ -9,6 +9,7 @@ import 'package:wxrdle/model/save_state_model.dart';
 import 'package:wxrdle/model/word_list.dart';
 import 'package:wxrdle/storage/local_box.dart';
 import 'package:wxrdle/utils/show_alert_dialog.dart';
+import 'package:wxrdle/utils/show_loader_dialog.dart';
 import 'package:wxrdle/widgets/game_selector.dart';
 import 'package:wxrdle/widgets/keyboard_button.dart';
 import 'package:wxrdle/widgets/selector_range.dart';
@@ -40,6 +41,10 @@ class _HomePageState extends State<HomePage> {
     1:"Continues",
     2:"Survival",
   };
+  final Map<int, String> _dictCheck = {
+    0:"No",
+    1:"Yes",
+  };
   final Map<int, int> _gameHighScore = {
     0:0,
     1:0,
@@ -49,6 +54,8 @@ class _HomePageState extends State<HomePage> {
   late Map<int, Widget> _wordBox;
   late int _currentIndex;
   late int _currentGameMode;
+  late int _currentDictCheck;
+  late String _currentWrongGuess;
   late String _answer;
   late int _answerPoint;
   late int _pointGot;
@@ -65,6 +72,8 @@ class _HomePageState extends State<HomePage> {
   late int _selectedMaxLength;
   late int _selectedMaxAnswer;
   late int _selectedGameMode;
+  late int _selectedDictCheck;
+  late bool _isCheckFailed;
 
   late List<AnswerList> _answerList;
   late Map<int, AnswerList> _currentAnswerList;
@@ -81,6 +90,13 @@ class _HomePageState extends State<HomePage> {
 
     // assuming that the current game mode is easy mode
     _currentGameMode = 0;
+
+    // assuming that we will never perform dictionary check
+    _currentDictCheck = 0;
+
+    // check is not yet failed
+    _isCheckFailed = false;
+    _currentWrongGuess = "";
 
     // initialize answer list
     _answerList = [];
@@ -145,6 +161,9 @@ class _HomePageState extends State<HomePage> {
                       color: correctGuess,
                       minWidth: double.infinity,
                       onPressed: () async {
+                        // save the state as reset
+                        await _saveState(isReset: true);
+
                         await _resetGame().then((value) {
                           if(value) {
                             _enableAllButton();
@@ -201,6 +220,9 @@ class _HomePageState extends State<HomePage> {
                   AnswerList _answerData = AnswerList(answer: _answer, correct: false);
                   _answerList.add(_answerData);
                   await _putAnswerList();
+
+                  // save the state as reset
+                  await _saveState(isReset: true);
     
                   showAlertDialog(
                     context: context,
@@ -250,6 +272,7 @@ class _HomePageState extends State<HomePage> {
                     _selectedMaxLength = _maxLength;
                     _selectedMaxAnswer = _maxAnswer;
                     _selectedGameMode = _currentGameMode;
+                    _selectedDictCheck = _currentDictCheck;
     
                     // show the dialog
                     await showDialog(
@@ -319,14 +342,22 @@ class _HomePageState extends State<HomePage> {
                                   }
                                 ),
                                 const SizedBox(height: 10,),
+                                const Text("Word Check"),
+                                GameSelector(
+                                  selectedGameMode: _selectedDictCheck,
+                                  gameType: _dictCheck,
+                                  onSelect: (value) {
+                                    _selectedDictCheck = value;
+                                  }
+                                ),
+                                const SizedBox(height: 20,),
                                 Center(
                                   child: MaterialButton(
-                                    onPressed: (() async {
-                                      debugPrint("Set the max length " + _selectedMaxLength.toString() + " and max answer " + _selectedMaxAnswer.toString());
-    
+                                    onPressed: (() async {    
                                       _maxAnswer = _selectedMaxAnswer;
                                       _maxLength = _selectedMaxLength;
                                       _currentGameMode = _selectedGameMode;
+                                      _currentDictCheck = _selectedDictCheck;
 
                                       // if user press apply, we will assuming all will be reset
                                       // so reset the current point into 0 again
@@ -334,6 +365,9 @@ class _HomePageState extends State<HomePage> {
 
                                       // save the configuration
                                       await _saveConfiguration();
+
+                                      // save the state as reset
+                                      await _saveState(isReset: true);
     
                                       await _resetGame().then((_) {
                                         // enable all button before we refresh the state
@@ -614,6 +648,21 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 10,),
+                      Visibility(
+                        visible: (_currentDictCheck == 1 && _isCheckFailed),
+                        child: Container(
+                          padding: const EdgeInsets.all(5),
+                          color: Colors.red,
+                          child: Text(
+                            _currentWrongGuess + " is not found in dictionary",
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: textColor,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -678,73 +727,49 @@ class _HomePageState extends State<HomePage> {
                           child: InkWell(
                             onTap: () async {
                               if(_guess.length == _maxLength) {
-                                await _checkAnswer().then((_) async {
-                                  _keyboardResult.forEach((char, status) {
-                                    _disableButton(char, status);
-                                  });
-
-                                  // save state once we add the current answer list and update the keyboard state
-                                  await _saveState();
-
-                                  // check if the answer correct or not?
-                                  if(_answer == _guess) {
-                                    // add point
-                                    _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
-                                    _currentPoint = _currentPoint + _pointGot;
-
-                                    // stored the current point to the box
-                                    await LocalBox.put(key: 'current_point', value: _currentPoint);
-
-                                    // update the score
-                                    _updateScore(true);
-
-                                    // generate the answer list and put on the answer list
-                                    AnswerList _answerData = AnswerList(answer: _answer, correct: true);
-                                    _answerList.add(_answerData);
-                                    await _putAnswerList();
-
-                                    // show dialog, and reset game
-                                    showAlertDialog(
-                                      context: context,
-                                      title: "You Win",
-                                      body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
-                                      headword: _defHeadword,
-                                      part: _defPart,
-                                      meaning: _defMeaning,
-                                      url: _defUrl,
-                                      callback: _resetGame,
-                                      enableButton: _enableAllButton
-                                    ).then((value) {
-                                      // just set state
-                                      setState(() {
-                                        _isLoading = false;
-                                      });
+                                _isCheckFailed = false;
+                                await _checkAnswer().then((result) async {
+                                  // check whether the answer given is acceptable or not?
+                                  if(!result) {
+                                    setState(() {
+                                      _currentWrongGuess = _guess;
+                                      _isCheckFailed = true;
                                     });
                                   }
                                   else {
-                                    // next current index
-                                    if(_currentIndex < (_maxAnswer - 1)) {
-                                      setState(() {
-                                        // next index
-                                        _currentIndex = _currentIndex + 1;
+                                    // answer acceptable, perform the action
+                                    _keyboardResult.forEach((char, status) {
+                                      _disableButton(char, status);
+                                    });
 
-                                        // clear the guess
-                                        _guess = "";
-                                      });
-                                    }
-                                    else {
+                                    // save state once we add the current answer list and update the keyboard state
+                                    await _saveState();
+
+                                    // check if the answer correct or not?
+                                    if(_answer == _guess) {
+                                      // add point
+                                      _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
+                                      _currentPoint = _currentPoint + _pointGot;
+
+                                      // stored the current point to the box
+                                      await LocalBox.put(key: 'current_point', value: _currentPoint);
+
                                       // update the score
-                                      _updateScore(false);
+                                      _updateScore(true);
 
                                       // generate the answer list and put on the answer list
-                                      AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                      AnswerList _answerData = AnswerList(answer: _answer, correct: true);
                                       _answerList.add(_answerData);
                                       await _putAnswerList();
 
+                                      // save the state as reset
+                                      await _saveState(isReset: true);
+
+                                      // show dialog, and reset game
                                       showAlertDialog(
                                         context: context,
-                                        title: "You Lose",
-                                        body: "Try again next time, correct answer is " + _answer,
+                                        title: "You Win",
+                                        body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
                                         headword: _defHeadword,
                                         part: _defPart,
                                         meaning: _defMeaning,
@@ -757,6 +782,47 @@ class _HomePageState extends State<HomePage> {
                                           _isLoading = false;
                                         });
                                       });
+                                    }
+                                    else {
+                                      // next current index
+                                      if(_currentIndex < (_maxAnswer - 1)) {
+                                        setState(() {
+                                          // next index
+                                          _currentIndex = _currentIndex + 1;
+
+                                          // clear the guess
+                                          _guess = "";
+                                        });
+                                      }
+                                      else {
+                                        // update the score
+                                        _updateScore(false);
+
+                                        // generate the answer list and put on the answer list
+                                        AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+                                        _answerList.add(_answerData);
+                                        await _putAnswerList();
+
+                                        // save the state as reset
+                                        await _saveState(isReset: true);
+
+                                        showAlertDialog(
+                                          context: context,
+                                          title: "You Lose",
+                                          body: "Try again next time, correct answer is " + _answer,
+                                          headword: _defHeadword,
+                                          part: _defPart,
+                                          meaning: _defMeaning,
+                                          url: _defUrl,
+                                          callback: _resetGame,
+                                          enableButton: _enableAllButton
+                                        ).then((value) {
+                                          // just set state
+                                          setState(() {
+                                            _isLoading = false;
+                                          });
+                                        });
+                                      }
                                     }
                                   }
                                 });
@@ -852,7 +918,31 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Future<void> _checkAnswer() async {
+  Future<bool> _checkAnswer() async {
+    bool _checkFailed = false;
+
+    if(_currentDictCheck == 1) {
+      // perform a dictionary check first
+      if(_answer != _guess) {
+        // we only need to perform check when the answer is not the same
+        showLoaderDialog(context);
+        await _getWordsAPI.searchWords(
+          word: _guess
+        ).then((resp) {
+          if(resp.wordPages.isEmpty) {
+            _checkFailed = true;
+          }
+        }).whenComplete(() {
+          // remove loader when complete
+          Navigator.of(context).pop();
+        });
+      }
+    }
+
+    if(_checkFailed) {
+      return false;
+    }
+
     // check the answer
     _wordBox[_currentIndex] = WordBox(
       answer: _answer,
@@ -899,6 +989,8 @@ class _HomePageState extends State<HomePage> {
         }
       }
     }
+
+    return true;
   }
 
   void _disableButton(String char, int status) {
@@ -926,6 +1018,7 @@ class _HomePageState extends State<HomePage> {
     await LocalBox.put(key: 'max_length', value: _maxLength);
     await LocalBox.put(key: 'max_answer', value: _maxAnswer);
     await LocalBox.put(key: 'game_mode', value: _currentGameMode);
+    await LocalBox.put(key: 'dict_check', value: _currentDictCheck);
     await LocalBox.put(key: 'current_point', value: _currentPoint);
   }
 
@@ -933,11 +1026,13 @@ class _HomePageState extends State<HomePage> {
     int? _currentMaxLength;
     int? _currentMaxAnswer;
     int? _currentConfigGameMode;
+    int? _currentConfigDictCheck;
     int? _currentHighScore;
 
     _currentMaxLength = LocalBox.get(key: 'max_length');
     _currentMaxAnswer = LocalBox.get(key: 'max_answer');
     _currentConfigGameMode = LocalBox.get(key: 'game_mode');
+    _currentConfigDictCheck = LocalBox.get(key: 'dict_check');
 
     if(_currentMaxLength == null) {
       await LocalBox.put(key: 'max_length', value: _maxLength);
@@ -958,6 +1053,13 @@ class _HomePageState extends State<HomePage> {
     }
     else {
       _currentGameMode = _currentConfigGameMode;
+    }
+
+    if(_currentConfigDictCheck == null) {
+      await LocalBox.put(key: 'game_mode', value: _currentDictCheck);
+    }
+    else {
+      _currentDictCheck = _currentConfigDictCheck;
     }
 
     // get high score for all mode
@@ -1052,9 +1154,6 @@ class _HomePageState extends State<HomePage> {
         _keyboardResult = {};
         _currentAnswerList = {};
 
-        // save the state as reset
-        await _saveState(isReset: true);
-
         // get the definition
         try {
           await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
@@ -1148,6 +1247,9 @@ class _HomePageState extends State<HomePage> {
         });
       }
       else {
+        // save the state as reset
+        await _saveState(isReset: true);
+
         await _resetGame().then((_) {
           // ensure to enable all the button before we refresh the state
           _enableAllButton();

@@ -48,6 +48,31 @@ class GetWordsAPI {
     }
   }
 
+  Future<WordList> searchWords({required String word}) async {
+    // generate the url based on the startChar and endChar
+    String _apiUrl = apiUrl;
+
+    _apiUrl = _apiUrl + "letters=" + word.toLowerCase() + "&length=" + word.length.toString() + "&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
+    // debugPrint(_apiUrl);
+
+    final response = await http.get(
+      Uri.parse(_apiUrl),
+      headers: {
+        HttpHeaders.contentTypeHeader: 'application/json',
+      },
+    );
+
+    if(response.statusCode == 200) {
+      // parse the response to get the word list
+      // debugPrint(response.body);
+      WordList _wordList = WordList.fromJson(jsonDecode(response.body));
+      return _wordList;
+    }
+    else {
+      throw Exception("Error when trying to get word from API");
+    }
+  }
+
   Future<DefinitionModel> getDefinition({required String word}) async {
     String _defUrl = defUrl + word;
 
