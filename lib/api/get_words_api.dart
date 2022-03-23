@@ -49,7 +49,7 @@ class GetWordsAPI {
     }
   }
 
-  Future<WordList> searchWords({required String word}) async {
+  Future<bool> searchWords({required String word}) async {
     // generate the url based on the startChar and endChar
     String _apiUrl = apiUrl;
 
@@ -67,7 +67,10 @@ class GetWordsAPI {
       // parse the response to get the word list
       // debugPrint(response.body);
       WordList _wordList = WordList.fromJson(jsonDecode(response.body));
-      return _wordList;
+      if(_wordList.wordPages.isEmpty) {
+        return true;
+      }
+      return false;
     }
     else {
       throw Exception("Error when trying to get word from API");

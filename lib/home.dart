@@ -930,9 +930,7 @@ class _HomePageState extends State<HomePage> {
         await _getWordsAPI.searchWords(
           word: _guess
         ).then((resp) {
-          if(resp.wordPages.isEmpty) {
-            _checkFailed = true;
-          }
+          _checkFailed = resp;
         }).whenComplete(() {
           // remove loader when complete
           Navigator.of(context).pop();
