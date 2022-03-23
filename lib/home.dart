@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/answer_list.dart';
+import 'package:wxrdle/model/definition_model.dart';
 import 'package:wxrdle/model/save_state_model.dart';
 import 'package:wxrdle/model/word_list.dart';
 import 'package:wxrdle/storage/local_box.dart';
@@ -1160,7 +1161,13 @@ class _HomePageState extends State<HomePage> {
             if(def.data.isNotEmpty) {
               _defHeadword = def.data[0].headword;
               _defPart = def.data[0].pos[0].poPart;
-              _defMeaning = def.data[0].pos[0].senses[0].txt;
+              _defMeaning = "";
+              for (Sense senses in def.data[0].pos[0].senses) {
+                if(senses.txt.isNotEmpty) {
+                  _defMeaning = senses.txt;
+                  break;
+                }
+              }
               _defUrl = def.data[0].audio;
             }
             else {
@@ -1225,6 +1232,7 @@ class _HomePageState extends State<HomePage> {
           length: _maxLength,
           startChar: _firstChar,
           endChar: _endChar,
+          dictionary: "wordle",
         ).then((resp) {
           _result = resp;
         });
