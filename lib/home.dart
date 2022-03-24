@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:badges/badges.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:wxrdle/api/get_words_api.dart';
@@ -56,6 +57,8 @@ class _HomePageState extends State<HomePage> {
   late int _currentIndex;
   late int _currentGameMode;
   late int _currentDictCheck;
+  late int _totalHints;
+  late int _totalStreak;
   late String _currentWrongGuess;
   late String _answer;
   late int _answerPoint;
@@ -95,6 +98,10 @@ class _HomePageState extends State<HomePage> {
     // assuming that we will never perform dictionary check
     _currentDictCheck = 0;
 
+    // default total hints is 5
+    _totalHints = 5;
+    _totalStreak = 0;
+
     // check is not yet failed
     _isCheckFailed = false;
     _currentWrongGuess = "";
@@ -115,7 +122,6 @@ class _HomePageState extends State<HomePage> {
 
     Future.microtask(() async {
       await _getConfiguration();
-      await _getCurrentPoint();
       await _getAnswerList();
       await _checkState();
     });
@@ -208,6 +214,99 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             actions: <Widget>[
+              Badge(
+                badgeColor: Colors.green[800]!,
+                position: BadgePosition.topEnd(top: 5, end: 3),
+                badgeContent: Text(_totalHints.toString()),
+                showBadge: (_totalHints > 0),
+                child: InkWell(
+                  onTap: (() async {
+                    // check if we still have hints or not
+                    if(_totalHints <= 0) {
+                      return;
+                    }
+
+                    // get the random number from 0 - maxLength
+                    List<int> _randomIndexList = List<int>.generate(_maxLength, (index) => index);
+                    _randomIndexList.shuffle();
+                    String _hint = (_answer.substring(_randomIndexList[0], _randomIndexList[0] + 1));
+
+                    // once got the hints show the dialog
+                    showDialog(context: context, builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: <Widget>[
+                            const Expanded(
+                              child: Text(
+                                "Hint",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              )
+                            ),
+                            const SizedBox(width: 10,),
+                            IconButton(
+                              onPressed: (() {
+                                // close the pop up
+                                Navigator.of(context).pop();
+                              }),
+                              icon: const Icon(
+                                CupertinoIcons.clear,
+                                color: Colors.white,
+                              )
+                            ),
+                          ],
+                        ),
+                        content: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Container(
+                                height: 100,
+                                width: 100,
+                                decoration: BoxDecoration(
+                                  color: correctGuess,
+                                  borderRadius: BorderRadius.circular(150)
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    _hint,
+                                    style: const TextStyle(
+                                      fontSize: 50,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                ),
+                              ),
+                              const SizedBox(height: 10,),
+                              Text("At position " + (_randomIndexList[0] + 1).toString()),
+                            ],
+                          ),
+                        ),
+                      );
+                    });
+
+                    setState(() {
+                      _totalHints = _totalHints - 1;
+                    });
+                    await LocalBox.put(key: 'total_hints', value: _totalHints);
+                  }),
+                  child: Container(
+                    height: 40,
+                    width: 40,
+                    margin: const EdgeInsets.fromLTRB(0, 0, 10, 0),
+                    // color: Colors.purple,
+                    child: const Icon(
+                      CupertinoIcons.lightbulb
+                    ),
+                  ),
+                ),
+              ),
               IconButton(
                 icon: const Icon(
                   CupertinoIcons.arrow_counterclockwise
@@ -242,7 +341,6 @@ class _HomePageState extends State<HomePage> {
                   });
                 }),
               ),
-              //TODO: to add hints if game being reset
             ],
           ),
           drawer: Drawer(
@@ -615,6 +713,23 @@ class _HomePageState extends State<HomePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.start,
             children: <Widget>[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List<Widget>.generate(10, (index) {
+                  return Expanded(
+                    child: Container(
+                      height: 4,
+                      margin: const EdgeInsets.fromLTRB(2, 0, 2, 0),
+                      decoration: BoxDecoration(
+                        color: ((index + 1) <= _totalStreak ? correctGuess : Colors.transparent),
+                        border: Border.all(color: Colors.grey[900]!)
+                      ),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(height: 5,),
               Expanded(
                 child: SingleChildScrollView(
                   controller: _scrollController,
@@ -756,6 +871,19 @@ class _HomePageState extends State<HomePage> {
                                       // stored the current point to the box
                                       await LocalBox.put(key: 'current_point', value: _currentPoint);
 
+                                      // add total streak
+                                      _totalStreak = _totalStreak + 1;
+                                      // check if _totalStreak already 10
+                                      if(_totalStreak >= 10) {
+                                        // add 1 hints
+                                        _totalHints = _totalHints + 1;
+                                        await LocalBox.put(key: 'total_hints', value: _totalHints);
+
+                                        // reset back total streak to 0
+                                        _totalStreak = 0;
+                                      }
+                                      await LocalBox.put(key: 'total_streak', value: _totalStreak);
+
                                       // update the score
                                       _updateScore(true);
 
@@ -797,6 +925,10 @@ class _HomePageState extends State<HomePage> {
                                         });
                                       }
                                       else {
+                                        // reset back the total streak to 0
+                                        _totalStreak = 0;
+                                        await LocalBox.put(key: 'total_streak', value: _totalStreak);
+
                                         // update the score
                                         _updateScore(false);
 
@@ -1023,16 +1155,32 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _getConfiguration() async {
+    int? _currentPointOnBox;
     int? _currentMaxLength;
     int? _currentMaxAnswer;
     int? _currentConfigGameMode;
     int? _currentConfigDictCheck;
     int? _currentHighScore;
+    int? _currentTotalHints;
+    int? _currentTotalStreak;
 
+    _currentPointOnBox = LocalBox.get(key: 'current_point');
     _currentMaxLength = LocalBox.get(key: 'max_length');
     _currentMaxAnswer = LocalBox.get(key: 'max_answer');
     _currentConfigGameMode = LocalBox.get(key: 'game_mode');
     _currentConfigDictCheck = LocalBox.get(key: 'dict_check');
+    _currentTotalHints = LocalBox.get(key: 'total_hints');
+    _currentTotalStreak = LocalBox.get(key: 'total_streak');
+
+    // check if _currentPointOnBox is null or not?
+    if(_currentPointOnBox == null) {
+      // put the current point as 0 on the box
+      await LocalBox.put(key: 'current_point', value: 0);
+    }
+    else {
+      // put the current point on box to _currentPoint
+      _currentPoint = _currentPointOnBox;
+    }
 
     if(_currentMaxLength == null) {
       await LocalBox.put(key: 'max_length', value: _maxLength);
@@ -1087,20 +1235,26 @@ class _HomePageState extends State<HomePage> {
     else {
       _gameHighScore[2] = _currentHighScore;
     }
-  }
 
-  Future<void> _getCurrentPoint() async {
-    int? _currentPointOnBox;
-
-    _currentPointOnBox = LocalBox.get(key: 'current_point');
-    // check if _currentPointOnBox is null or not?
-    if(_currentPointOnBox == null) {
-      // put the current point as 0 on the box
-      await LocalBox.put(key: 'current_point', value: 0);
+    // get current total hints available for user
+    if(_currentTotalHints == null) {
+      // default hints is 5
+      await LocalBox.put(key: 'total_hints', value: 5);
+      _totalHints = 5;
     }
     else {
       // put the current point on box to _currentPoint
-      _currentPoint = _currentPointOnBox;
+      _totalHints = _currentTotalHints;
+    }
+
+    // get current total streak of user
+    if(_currentTotalStreak == null) {
+      // default hints is 5
+      await LocalBox.put(key: 'total_streak', value: 0);
+    }
+    else {
+      // put the current point on box to _currentPoint
+      _totalStreak = _currentTotalStreak;
     }
   }
 

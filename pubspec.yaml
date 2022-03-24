@@ -38,6 +38,7 @@ dependencies:
   hive: ^2.0.6
   hive_flutter: ^1.1.0
   audioplayers: ^0.20.1
+  badges: ^2.0.2
 
 dev_dependencies:
   flutter_test:
