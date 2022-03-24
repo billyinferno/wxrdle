@@ -242,6 +242,7 @@ class _HomePageState extends State<HomePage> {
                   });
                 }),
               ),
+              //TODO: to add hints if game being reset
             ],
           ),
           drawer: Drawer(
@@ -1379,6 +1380,9 @@ class _HomePageState extends State<HomePage> {
         // reset the current point into 0
         _currentPoint = 0;
       }
+
+      // save the current point to avoid user to restart to restore the current point1
+      await LocalBox.put(key: 'current_point', value: _currentPoint);
     }
 
     // check if current point more than high score or not?
