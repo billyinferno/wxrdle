@@ -70,7 +70,16 @@ class GetWordsAPI {
       if(_wordList.wordPages.isEmpty) {
         return true;
       }
-      return false;
+
+      // wordPages is not empty, means we need to loop and see whether there are any word match
+      // if there are word match then return as false, if not, then return as true
+      WordPage _wp = _wordList.wordPages[0];
+      for (WordListElement _wl in _wp.wordList) {
+        if(_wl.word.toLowerCase() == word.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
     }
     else {
       throw Exception("Error when trying to get word from API");
