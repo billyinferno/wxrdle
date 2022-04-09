@@ -33,6 +33,28 @@ https://hub.docker.com/repository/docker/adimartha/wxrdle
 
 docker pull adimartha/wxrdle:latest
 
+### Docker Compose Example
+I am using this docker compose on portainer
+
+```
+version: '3.3'
+services:
+    my_expense:
+        container_name: wxrdle
+        image: adimartha/wxrdle
+        ports:
+            - 4011:80
+        restart: unless-stopped
+```
+
+With this you can access the application from your browser using:
+
+```
+your-docker-IP:4111
+````
+
+You can change the IP address on the docker compose to fit your need.
+
 ## Test it out
 You can test it on the github hosted pages below
 
