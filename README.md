@@ -34,12 +34,12 @@ https://hub.docker.com/repository/docker/adimartha/wxrdle
 docker pull adimartha/wxrdle:latest
 
 ### Docker Compose Example
-I am using this docker compose on portainer
+I am using this docker compose on portainer (stack)
 
 ```
 version: '3.3'
 services:
-    my_expense:
+    wxrdle:
         container_name: wxrdle
         image: adimartha/wxrdle
         ports:
