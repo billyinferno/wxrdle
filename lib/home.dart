@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:badges/badges.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
 import 'package:wxrdle/model/answer_list.dart';
@@ -26,6 +27,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
+  final FocusNode _keyboardNode = FocusNode();
   final Random _random = Random();
   final GetWordsAPI _getWordsAPI = GetWordsAPI();
   final Map<int, List<String>> _keyboardRow = {
@@ -78,6 +80,7 @@ class _HomePageState extends State<HomePage> {
   late int _selectedGameMode;
   late int _selectedDictCheck;
   late bool _isCheckFailed;
+  late bool _prevKeyPressBackspace;
 
   late List<AnswerList> _answerList;
   late Map<int, AnswerList> _currentAnswerList;
@@ -88,6 +91,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+
+    // assuming that backspace not yet pressed
+    _prevKeyPressBackspace = false;
 
     // assuming current index is 0
     _currentIndex = 0;
@@ -130,6 +136,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _keyboardNode.dispose();
     super.dispose();
   }
 
@@ -709,279 +716,136 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List<Widget>.generate(10, (index) {
-                  return Expanded(
-                    child: Container(
-                      height: 4,
-                      margin: const EdgeInsets.fromLTRB(2, 0, 2, 0),
-                      decoration: BoxDecoration(
-                        color: ((index + 1) <= _totalStreak ? correctGuess : Colors.transparent),
-                        border: Border.all(color: Colors.grey[900]!)
-                      ),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 5,),
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      ...List.generate(_maxAnswer, (index) {
-                        return _wordBox[index]!;
-                      }),
-                      const SizedBox(height: 5,),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Text(
-                            _currentPoint.toString(),
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: (_currentPoint == _gameHighScore[_currentGameMode]! ? correctGuess : locationGuess),
-                            ),
-                          ),
-                          const SizedBox(width: 5,),
-                          Text(
-                            "(" + _gameHighScore[_currentGameMode]!.toString() + ")",
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: correctGuess,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10,),
-                      Visibility(
-                        visible: (_currentDictCheck == 1 && _isCheckFailed),
-                        child: Container(
-                          padding: const EdgeInsets.all(5),
-                          color: Colors.red,
-                          child: Text(
-                            _currentWrongGuess + " is not found in dictionary",
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: textColor,
-                            ),
-                          ),
+          body: KeyboardListener(
+            autofocus: true,
+            focusNode: _keyboardNode,
+            onKeyEvent: ((val) async {
+              if(val.logicalKey == LogicalKeyboardKey.backspace) {
+                // debouncing for backspace, as it registered as 2 keystroke instead of 1
+                if (!_prevKeyPressBackspace) {
+                  if(_guess.isNotEmpty) {
+                    // set the current guess
+                    _guess = _guess.substring(0, _guess.length - 1);
+                    // now change the wordbox on current index
+                    setState(() {
+                      _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                    });
+                  }
+                  _prevKeyPressBackspace = true;
+                }
+                else {
+                  _prevKeyPressBackspace = false;
+                }
+              }
+              else if(val.logicalKey == LogicalKeyboardKey.enter) {
+                await _keyboardEnter();
+              }
+              else {
+                if(val.character != null) {
+                  // check if the character is not disable
+                  if (_checkButton(val.character!.toUpperCase())) {
+                    // check if the current guess length < than max length
+                    if(_guess.length < _maxLength) {
+                      // debugPrint(value);
+                      // set the current guess
+                      _guess = _guess + val.character!.toUpperCase();
+                      // now change the wordbox on current index
+                      setState(() {
+                        _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                      });
+                    }
+                  }
+                }
+              }
+            }),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List<Widget>.generate(10, (index) {
+                    return Expanded(
+                      child: Container(
+                        height: 4,
+                        margin: const EdgeInsets.fromLTRB(2, 0, 2, 0),
+                        decoration: BoxDecoration(
+                          color: ((index + 1) <= _totalStreak ? correctGuess : Colors.transparent),
+                          border: Border.all(color: Colors.grey[900]!)
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  }),
                 ),
-              ),
-              Container(
-                height: 160,
-                padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(10, (index) {
-                        return KeyboardButton(
-                          enabled: _keyboardState[0]![index],
-                          char: _keyboardRow[0]![index],
-                          onPress: ((value) {
-                            // check if the current guess length < than max length
-                            if(_guess.length < _maxLength) {
-                              // debugPrint(value);
-                              // set the current guess
-                              _guess = _guess + value;
-                              // now change the wordbox on current index
-                              setState(() {
-                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                              });
-                            }
-                          })
-                        );
-                      }),
-                    ),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(9, (index) {
-                        return KeyboardButton(
-                          char: _keyboardRow[1]![index],
-                          enabled: _keyboardState[1]![index],
-                          onPress: ((value) {
-                            // check if the current guess length < than max length
-                            if(_guess.length < _maxLength) {
-                              // debugPrint(value);
-                              // set the current guess
-                              _guess = _guess + value;
-                              // now change the wordbox on current index
-                              setState(() {
-                                _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                              });
-                            }
-                          })
-                        );
-                      }),
-                    ),
-                    Row(
+                const SizedBox(height: 5,),
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        SizedBox(
-                          height: 50,
-                          width: _buttonWidth,
-                          child: InkWell(
-                            onTap: () async {
-                              if(_guess.length == _maxLength) {
-                                _isCheckFailed = false;
-                                await _checkAnswer().then((result) async {
-                                  // check whether the answer given is acceptable or not?
-                                  if(!result) {
-                                    setState(() {
-                                      _currentWrongGuess = _guess;
-                                      _isCheckFailed = true;
-                                    });
-                                  }
-                                  else {
-                                    // answer acceptable, perform the action
-                                    _keyboardResult.forEach((char, status) {
-                                      _disableButton(char, status);
-                                    });
-
-                                    // save state once we add the current answer list and update the keyboard state
-                                    await _saveState();
-
-                                    // check if the answer correct or not?
-                                    if(_answer == _guess) {
-                                      // add point
-                                      _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
-                                      _currentPoint = _currentPoint + _pointGot;
-
-                                      // stored the current point to the box
-                                      await LocalBox.put(key: 'current_point', value: _currentPoint);
-
-                                      // add total streak
-                                      _totalStreak = _totalStreak + 1;
-                                      // check if _totalStreak already 10
-                                      if(_totalStreak >= 10) {
-                                        // add 1 hints
-                                        _totalHints = _totalHints + 1;
-                                        await LocalBox.put(key: 'total_hints', value: _totalHints);
-
-                                        // reset back total streak to 0
-                                        _totalStreak = 0;
-                                      }
-                                      await LocalBox.put(key: 'total_streak', value: _totalStreak);
-
-                                      // update the score
-                                      _updateScore(true);
-
-                                      // generate the answer list and put on the answer list
-                                      AnswerList _answerData = AnswerList(answer: _answer, correct: true);
-                                      _answerList.add(_answerData);
-                                      await _putAnswerList();
-
-                                      // save the state as reset
-                                      await _saveState(isReset: true);
-
-                                      // show dialog, and reset game
-                                      showAlertDialog(
-                                        context: context,
-                                        title: "You Win",
-                                        body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
-                                        headword: _defHeadword,
-                                        part: _defPart,
-                                        meaning: _defMeaning,
-                                        url: _defUrl,
-                                        callback: _resetGame,
-                                        enableButton: _enableAllButton
-                                      ).then((value) {
-                                        // just set state
-                                        setState(() {
-                                          _isLoading = false;
-                                        });
-                                      });
-                                    }
-                                    else {
-                                      // next current index
-                                      if(_currentIndex < (_maxAnswer - 1)) {
-                                        setState(() {
-                                          // next index
-                                          _currentIndex = _currentIndex + 1;
-
-                                          // clear the guess
-                                          _guess = "";
-                                        });
-                                      }
-                                      else {
-                                        // reset back the total streak to 0
-                                        _totalStreak = 0;
-                                        await LocalBox.put(key: 'total_streak', value: _totalStreak);
-
-                                        // update the score
-                                        _updateScore(false);
-
-                                        // generate the answer list and put on the answer list
-                                        AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-                                        _answerList.add(_answerData);
-                                        await _putAnswerList();
-
-                                        // save the state as reset
-                                        await _saveState(isReset: true);
-
-                                        showAlertDialog(
-                                          context: context,
-                                          title: "You Lose",
-                                          body: "Try again next time, correct answer is " + _answer,
-                                          headword: _defHeadword,
-                                          part: _defPart,
-                                          meaning: _defMeaning,
-                                          url: _defUrl,
-                                          callback: _resetGame,
-                                          enableButton: _enableAllButton
-                                        ).then((value) {
-                                          // just set state
-                                          setState(() {
-                                            _isLoading = false;
-                                          });
-                                        });
-                                      }
-                                    }
-                                  }
-                                });
-                              }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: buttonBackground,
-                                borderRadius: BorderRadius.circular(5),
+                        ...List.generate(_maxAnswer, (index) {
+                          return _wordBox[index]!;
+                        }),
+                        const SizedBox(height: 5,),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            Text(
+                              _currentPoint.toString(),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: (_currentPoint == _gameHighScore[_currentGameMode]! ? correctGuess : locationGuess),
                               ),
-                              margin: const EdgeInsets.all(2),
-                              child: const Align(
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  CupertinoIcons.check_mark,
-                                  size: 15,
-                                ),
+                            ),
+                            const SizedBox(width: 5,),
+                            Text(
+                              "(" + _gameHighScore[_currentGameMode]!.toString() + ")",
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: correctGuess,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10,),
+                        Visibility(
+                          visible: (_currentDictCheck == 1 && _isCheckFailed),
+                          child: Container(
+                            padding: const EdgeInsets.all(5),
+                            color: Colors.red,
+                            child: Text(
+                              _currentWrongGuess + " is not found in dictionary",
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: textColor,
                               ),
                             ),
                           ),
                         ),
-                        ...List.generate(7, (index) {
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  height: 160,
+                  padding: const EdgeInsets.fromLTRB(10, 0, 10, 0),
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(10, (index) {
                           return KeyboardButton(
-                            char: _keyboardRow[2]![index],
-                            enabled: _keyboardState[2]![index],
+                            enabled: _keyboardState[0]![index],
+                            char: _keyboardRow[0]![index],
                             onPress: ((value) {
                               // check if the current guess length < than max length
                               if(_guess.length < _maxLength) {
@@ -996,56 +860,125 @@ class _HomePageState extends State<HomePage> {
                             })
                           );
                         }),
-                        SizedBox(
-                          height: 50,
-                          width: _buttonWidth,
-                          child: InkWell(
-                            onTap: () {
-                              // debugPrint("Delete");
-                              if(_guess.isNotEmpty) {
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(9, (index) {
+                          return KeyboardButton(
+                            char: _keyboardRow[1]![index],
+                            enabled: _keyboardState[1]![index],
+                            onPress: ((value) {
+                              // check if the current guess length < than max length
+                              if(_guess.length < _maxLength) {
                                 // debugPrint(value);
                                 // set the current guess
-                                _guess = _guess.substring(0, _guess.length - 1);
+                                _guess = _guess + value;
                                 // now change the wordbox on current index
                                 setState(() {
                                   _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
                                 });
                               }
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: buttonBackground,
-                                borderRadius: BorderRadius.circular(5),
-                              ),
-                              margin: const EdgeInsets.all(2),
-                              child: const Align(
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  CupertinoIcons.delete_left,
-                                  size: 15,
+                            })
+                          );
+                        }),
+                      ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          SizedBox(
+                            height: 50,
+                            width: _buttonWidth,
+                            child: InkWell(
+                              onTap: () async {
+                                await _keyboardEnter();
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: buttonBackground,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                margin: const EdgeInsets.all(2),
+                                child: const Align(
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    CupertinoIcons.check_mark,
+                                    size: 15,
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                          ...List.generate(7, (index) {
+                            return KeyboardButton(
+                              char: _keyboardRow[2]![index],
+                              enabled: _keyboardState[2]![index],
+                              onPress: ((value) {
+                                // check if the current guess length < than max length
+                                if(_guess.length < _maxLength) {
+                                  // debugPrint(value);
+                                  // set the current guess
+                                  _guess = _guess + value;
+                                  // now change the wordbox on current index
+                                  setState(() {
+                                    _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                                  });
+                                }
+                              })
+                            );
+                          }),
+                          SizedBox(
+                            height: 50,
+                            width: _buttonWidth,
+                            child: InkWell(
+                              onTap: () {
+                                // debugPrint("Delete");
+                                if(_guess.isNotEmpty) {
+                                  // debugPrint(value);
+                                  // set the current guess
+                                  _guess = _guess.substring(0, _guess.length - 1);
+                                  // now change the wordbox on current index
+                                  setState(() {
+                                    _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                                  });
+                                }
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: buttonBackground,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                margin: const EdgeInsets.all(2),
+                                child: const Align(
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    CupertinoIcons.delete_left,
+                                    size: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(
-                height: 20,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: Text(
-                    "Word is provided by https://word.tips/ - https://yourdictionary.com/",
-                    style: TextStyle(
-                      fontSize: 10,
+                const SizedBox(
+                  height: 20,
+                  child: Align(
+                    alignment: Alignment.center,
+                    child: Text(
+                      "Word is provided by https://word.tips/ - https://yourdictionary.com/",
+                      style: TextStyle(
+                        fontSize: 10,
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1144,6 +1077,25 @@ class _HomePageState extends State<HomePage> {
         _keyboardState[i]![j] = 1;
       }
     }
+  }
+
+  bool _checkButton(String char) {
+    // loop in keyboardRow to get where is the char location
+    for(int i = 0; i <= 2; i++) {
+      for(int j = 0; j < _keyboardRow[i]!.length; j++) {
+        // check if the char is the same or not
+        if(_keyboardRow[i]![j] == char) {
+          // disable this button
+          if (_keyboardState[i]![j] > 0) {
+            return true;
+          }
+          return false;
+        }
+      }
+    }
+    // other than the one we put on the keyboard row it means
+    // that the character is invalid.
+    return false;
   }
 
   Future<void> _saveConfiguration() async {
@@ -1546,5 +1498,126 @@ class _HomePageState extends State<HomePage> {
       _gameHighScore[_currentGameMode] = _currentPoint;
       await LocalBox.put(key: 'high_score_' + _currentGameMode.toString(), value: _currentPoint);
     }
+  }
+
+  Future<void> _keyboardEnter() async {
+    if(_guess.length == _maxLength) {
+    _isCheckFailed = false;
+    await _checkAnswer().then((result) async {
+      // check whether the answer given is acceptable or not?
+      if(!result) {
+        setState(() {
+          _currentWrongGuess = _guess;
+          _isCheckFailed = true;
+        });
+      }
+      else {
+        // answer acceptable, perform the action
+        _keyboardResult.forEach((char, status) {
+          _disableButton(char, status);
+        });
+
+        // save state once we add the current answer list and update the keyboard state
+        await _saveState();
+
+        // check if the answer correct or not?
+        if(_answer == _guess) {
+          // add point
+          _pointGot = (_answerPoint * (_maxAnswer - _currentIndex));
+          _currentPoint = _currentPoint + _pointGot;
+
+          // stored the current point to the box
+          await LocalBox.put(key: 'current_point', value: _currentPoint);
+
+          // add total streak
+          _totalStreak = _totalStreak + 1;
+          // check if _totalStreak already 10
+          if(_totalStreak >= 10) {
+            // add 1 hints
+            _totalHints = _totalHints + 1;
+            await LocalBox.put(key: 'total_hints', value: _totalHints);
+
+            // reset back total streak to 0
+            _totalStreak = 0;
+          }
+          await LocalBox.put(key: 'total_streak', value: _totalStreak);
+
+          // update the score
+          _updateScore(true);
+
+          // generate the answer list and put on the answer list
+          AnswerList _answerData = AnswerList(answer: _answer, correct: true);
+          _answerList.add(_answerData);
+          await _putAnswerList();
+
+          // save the state as reset
+          await _saveState(isReset: true);
+
+          // show dialog, and reset game
+          showAlertDialog(
+            context: context,
+            title: "You Win",
+            body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
+            headword: _defHeadword,
+            part: _defPart,
+            meaning: _defMeaning,
+            url: _defUrl,
+            callback: _resetGame,
+            enableButton: _enableAllButton
+          ).then((value) {
+            // just set state
+            setState(() {
+              _isLoading = false;
+            });
+          });
+        }
+        else {
+          // next current index
+          if(_currentIndex < (_maxAnswer - 1)) {
+            setState(() {
+              // next index
+              _currentIndex = _currentIndex + 1;
+
+              // clear the guess
+              _guess = "";
+            });
+          }
+          else {
+            // reset back the total streak to 0
+            _totalStreak = 0;
+            await LocalBox.put(key: 'total_streak', value: _totalStreak);
+
+            // update the score
+            _updateScore(false);
+
+            // generate the answer list and put on the answer list
+            AnswerList _answerData = AnswerList(answer: _answer, correct: false);
+            _answerList.add(_answerData);
+            await _putAnswerList();
+
+            // save the state as reset
+            await _saveState(isReset: true);
+
+            showAlertDialog(
+              context: context,
+              title: "You Lose",
+              body: "Try again next time, correct answer is " + _answer,
+              headword: _defHeadword,
+              part: _defPart,
+              meaning: _defMeaning,
+              url: _defUrl,
+              callback: _resetGame,
+              enableButton: _enableAllButton
+            ).then((value) {
+              // just set state
+              setState(() {
+                _isLoading = false;
+              });
+            });
+          }
+        }
+      }
+    });
+  }
   }
 }
