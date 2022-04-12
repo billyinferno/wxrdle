@@ -9,7 +9,6 @@ class KeyboardButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // debugPrint("char (" + char + ") status (" + enabled.toString() + ")");
     double _width = (MediaQuery.of(context).size.width - 20) / 10;
     if (_width > 50) {
       _width = 50;
@@ -38,10 +37,7 @@ class KeyboardButton extends StatelessWidget {
       height: 50,
       child: InkWell(
         onTap: (() {
-          // if(enabled > 0) {
           onPress(char);
-      
-          // }
         }),
         child: Container(
           decoration: BoxDecoration(

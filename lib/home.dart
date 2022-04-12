@@ -742,21 +742,18 @@ class _HomePageState extends State<HomePage> {
               }
               else {
                 if(val.character != null) {
-                  // check if the character is not disable
-                  // if (_checkButton(val.character!.toUpperCase())) {
-                    // check if the current guess length < than max length
-                    if(_guess.length < _maxLength) {
-                      // debugPrint(value);
-                      // set the current guess
-                      _guess = _guess + val.character!.toUpperCase();
-                      // now change the wordbox on current index
-                      setState(() {
-                        _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
-                      });
-                    }
+                  // check if the current guess length < than max length
+                  if(_guess.length < _maxLength) {
+                    // debugPrint(value);
+                    // set the current guess
+                    _guess = _guess + val.character!.toUpperCase();
+                    // now change the wordbox on current index
+                    setState(() {
+                      _wordBox[_currentIndex] = WordBox(answer: _answer, guess: _guess, length: _maxLength,);
+                    });
                   }
                 }
-              // }
+              }
             }),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1079,24 +1076,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  bool _checkButton(String char) {
-    // loop in keyboardRow to get where is the char location
-    for(int i = 0; i <= 2; i++) {
-      for(int j = 0; j < _keyboardRow[i]!.length; j++) {
-        // check if the char is the same or not
-        if(_keyboardRow[i]![j] == char) {
-          // disable this button
-          if (_keyboardState[i]![j] > 0) {
-            return true;
-          }
-          return false;
-        }
-      }
-    }
-    // other than the one we put on the keyboard row it means
-    // that the character is invalid.
-    return false;
-  }
+  // bool _checkButton(String char) {
+  //   // loop in keyboardRow to get where is the char location
+  //   for(int i = 0; i <= 2; i++) {
+  //     for(int j = 0; j < _keyboardRow[i]!.length; j++) {
+  //       // check if the char is the same or not
+  //       if(_keyboardRow[i]![j] == char) {
+  //         // disable this button
+  //         if (_keyboardState[i]![j] > 0) {
+  //           return true;
+  //         }
+  //         return false;
+  //       }
+  //     }
+  //   }
+  //   // other than the one we put on the keyboard row it means
+  //   // that the character is invalid.
+  //   return false;
+  // }
 
   Future<void> _saveConfiguration() async {
     await LocalBox.put(key: 'max_length', value: _maxLength);
