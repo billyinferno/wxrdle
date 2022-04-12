@@ -743,7 +743,7 @@ class _HomePageState extends State<HomePage> {
               else {
                 if(val.character != null) {
                   // check if the character is not disable
-                  if (_checkButton(val.character!.toUpperCase())) {
+                  // if (_checkButton(val.character!.toUpperCase())) {
                     // check if the current guess length < than max length
                     if(_guess.length < _maxLength) {
                       // debugPrint(value);
@@ -756,7 +756,7 @@ class _HomePageState extends State<HomePage> {
                     }
                   }
                 }
-              }
+              // }
             }),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

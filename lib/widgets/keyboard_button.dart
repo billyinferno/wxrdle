@@ -38,9 +38,10 @@ class KeyboardButton extends StatelessWidget {
       height: 50,
       child: InkWell(
         onTap: (() {
-          if(enabled > 0) {
-            onPress(char);
-          }
+          // if(enabled > 0) {
+          onPress(char);
+      
+          // }
         }),
         child: Container(
           decoration: BoxDecoration(
