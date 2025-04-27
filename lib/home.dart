@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:wxrdle/api/get_words_api.dart';
 import 'package:wxrdle/globals/colors.dart';
+import 'package:wxrdle/globals/url.dart';
 import 'package:wxrdle/model/answer_list.dart';
 import 'package:wxrdle/model/definition_model.dart';
 import 'package:wxrdle/model/save_state_model.dart';
@@ -647,6 +648,8 @@ class _HomePageState extends State<HomePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: <Widget>[
+                                Text("Version ${URLConfig.version}"),
+                                const SizedBox(height: 10,),
                                 const Text("Copyright © - 2022 - Adi Martha"),
                                 const Text("GNU GPL License v.3"),
                                 const SizedBox(height: 10,),
