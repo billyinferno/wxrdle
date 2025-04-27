@@ -6,30 +6,10 @@ import 'package:wxrdle/model/definition_model.dart';
 import 'package:wxrdle/model/word_list.dart';
 
 class GetWordsAPI {
-  Future<WordList> getWords({String? startChar, String? endChar, required int length, String? dictionary}) async {
+  // Future<WordList> getWords({String? startChar, String? endChar, required int length, String? dictionary}) async {
+  Future<WordList> getWords({required String startChar, required String endChar, required int length}) async {
     // generate the url based on the startChar and endChar
-    String currentApiURL = apiUrl;
-    bool gotParam = false;
-    String currentDictionary = (dictionary ?? 'all_en');
-
-    if(startChar != null) {
-      currentApiURL = "${currentApiURL}starts_with=$startChar";
-      gotParam = true;
-    }
-
-    if(endChar != null) {
-      if(gotParam) {
-        currentApiURL = "$currentApiURL&";
-      }
-      currentApiURL = "${currentApiURL}ends_with=$endChar";
-      gotParam = true;
-    }
-
-    if(gotParam) {
-      currentApiURL = "$currentApiURL&";
-    }
-    currentApiURL = "${currentApiURL}length=$length&word_sorting=points&group_by_length=false&page_size=99999&dictionary=$currentDictionary";
-    // debugPrint(_apiUrl);
+    String currentApiURL = "${apiUrl}start/$startChar/end/$endChar/length/$length";
 
     final response = await http.get(
       Uri.parse(currentApiURL),

@@ -1340,19 +1340,17 @@ class _HomePageState extends State<HomePage> {
       alphabet.shuffle(_random);
       endChar = alphabet[0];
 
-      try {
-        await _getWordsAPI.getWords(
-          length: _maxLength,
-          startChar: firstChar,
-          endChar: endChar,
-          dictionary: "wordle",
-        ).then((resp) {
-          result = resp;
-        });
-      }
-      catch(e) {
+      await _getWordsAPI.getWords(
+        length: _maxLength,
+        startChar: firstChar,
+        endChar: endChar,
+      ).then((resp) {
+        result = resp;
+      }).onError((error, stackTrace) {
+        debugPrint("Error:${error.toString()}");
+        debugPrintStack(stackTrace: stackTrace);
         throw Exception("Error when get words from API");
-      }
+      },);
     }
 
     return result;
