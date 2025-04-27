@@ -14,7 +14,7 @@ void main() {
   // initialize flutter application
   Future.microtask(() async {
     // load the env
-    await dotenv.load(fileName: 'env/.dev.env');
+    await dotenv.load(fileName: 'env/.prod.env');
   });
 
   Future.wait([
