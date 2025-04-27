@@ -24,6 +24,17 @@ There are few costumizations that you can perform for your game:
 - <strong>Survival</strong>: In case you skipper/got wrong answer your current point will be reset back to 0.
 4. Word Check (to perform dictionary check when player input the guess)
 
+## Wxrdle Server
+As some API is protected using CORS, but allowed using localhost, you will need to run you own server and change the URL accordingly.
+Server can be found on the `/server` folder.
+
+To run server do:
+1. cd server
+2. npm install
+3. pm2 start ecosystem.config.js
+
+Then you can setup your reverse proxy and change the URL on your ENV to point to your API.
+
 ## How to Run
 1. clone the project
 2. flutter run!
