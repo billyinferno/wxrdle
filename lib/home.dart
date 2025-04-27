@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
-import 'package:badges/badges.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,7 +19,7 @@ import 'package:wxrdle/widgets/selector_range.dart';
 import 'package:wxrdle/widgets/word_box.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({ Key? key }) : super(key: key);
+  const HomePage({ super.key });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -152,42 +152,44 @@ class _HomePageState extends State<HomePage> {
     else {
       if(_errorGetWord) {
         return Scaffold(
-          body: Center(
-            child: Container(
-              height: 200,
-              margin: const EdgeInsets.all(20),
-              color: Colors.grey[800],
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  const Icon(
-                    CupertinoIcons.xmark_circle_fill,
-                    color: Colors.red,
-                    size: 35,
-                  ),
-                  const SizedBox(height: 10,),
-                  const Text("Error when get words from API."),
-                  const Text("Please wait a moment, and try refresh again"),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    child: MaterialButton(
-                      color: correctGuess,
-                      minWidth: double.infinity,
-                      onPressed: () async {
-                        // save the state as reset
-                        await _saveState(isReset: true);
-
-                        await _resetGame().then((value) {
-                          if(value) {
-                            _enableAllButton();
-                          }
-                        });
-                      },
-                      child: const Text("Refresh"),
+          body: SafeArea(
+            child: Center(
+              child: Container(
+                height: 200,
+                margin: const EdgeInsets.all(20),
+                color: Colors.grey[800],
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    const Icon(
+                      CupertinoIcons.xmark_circle_fill,
+                      color: Colors.red,
+                      size: 35,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 10,),
+                    const Text("Error when get words from API."),
+                    const Text("Please wait a moment, and try refresh again"),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      child: MaterialButton(
+                        color: correctGuess,
+                        minWidth: double.infinity,
+                        onPressed: () async {
+                          // save the state as reset
+                          await _saveState(isReset: true);
+            
+                          await _resetGame().then((value) {
+                            if(value) {
+                              _enableAllButton();
+                            }
+                          });
+                        },
+                        child: const Text("Refresh"),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -221,9 +223,9 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             actions: <Widget>[
-              Badge(
-                badgeColor: Colors.green[800]!,
-                position: BadgePosition.topEnd(top: 5, end: 3),
+              badges.Badge(
+                badgeStyle: badges.BadgeStyle(badgeColor: Colors.green[800]!),
+                position: badges.BadgePosition.topEnd(top: 5, end: 3),
                 badgeContent: Text(_totalHints.toString()),
                 showBadge: (_totalHints > 0),
                 child: InkWell(
@@ -234,9 +236,9 @@ class _HomePageState extends State<HomePage> {
                     }
 
                     // get the random number from 0 - maxLength
-                    List<int> _randomIndexList = List<int>.generate(_maxLength, (index) => index);
-                    _randomIndexList.shuffle();
-                    String _hint = (_answer.substring(_randomIndexList[0], _randomIndexList[0] + 1));
+                    List<int> randomIndexList = List<int>.generate(_maxLength, (index) => index);
+                    randomIndexList.shuffle();
+                    String hint = (_answer.substring(randomIndexList[0], randomIndexList[0] + 1));
 
                     // once got the hints show the dialog
                     showDialog(context: context, builder: (BuildContext context) {
@@ -282,7 +284,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                                 child: Center(
                                   child: Text(
-                                    _hint,
+                                    hint,
                                     style: const TextStyle(
                                       fontSize: 50,
                                       fontWeight: FontWeight.bold,
@@ -291,7 +293,7 @@ class _HomePageState extends State<HomePage> {
                                 ),
                               ),
                               const SizedBox(height: 10,),
-                              Text("At position " + (_randomIndexList[0] + 1).toString()),
+                              Text("At position ${randomIndexList[0] + 1}"),
                             ],
                           ),
                         ),
@@ -324,28 +326,30 @@ class _HomePageState extends State<HomePage> {
 
                   // put the result as false
                   // generate the answer list and put on the answer list
-                  AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-                  _answerList.add(_answerData);
+                  AnswerList answerData = AnswerList(answer: _answer, correct: false);
+                  _answerList.add(answerData);
                   await _putAnswerList();
 
                   // save the state as reset
                   await _saveState(isReset: true);
-    
-                  showAlertDialog(
-                    context: context,
-                    title: "Skipped",
-                    body: "Skipped answer is " + _answer,
-                    headword: _defHeadword,
-                    part: _defPart,
-                    meaning: _defMeaning,
-                    url: _defUrl,
-                    callback: _resetGame,
-                    enableButton: _enableAllButton
-                  ).then((value) async {
-                    setState(() {
-                      _isLoading = false;
+
+                  if (mounted) {
+                    showAlertDialog(
+                      context: context,
+                      title: "Skipped",
+                      body: "Skipped answer is $_answer",
+                      headword: _defHeadword,
+                      part: _defPart,
+                      meaning: _defMeaning,
+                      url: _defUrl,
+                      callback: _resetGame,
+                      enableButton: _enableAllButton
+                    ).then((value) async {
+                      setState(() {
+                        _isLoading = false;
+                      });
                     });
-                  });
+                  }
                 }),
               ),
             ],
@@ -484,12 +488,14 @@ class _HomePageState extends State<HomePage> {
                                           _isLoading = false;
                                         });
                                       });
-    
-                                      Navigator.of(context).pop();
+
+                                      if (context.mounted) {
+                                        Navigator.of(context).pop();
+                                      }
                                     }),
-                                    child: const Text("Apply"),
                                     color: correctGuess,
                                     minWidth: double.infinity,
+                                    child: const Text("Apply"),
                                   ),
                                 ),
                               ],
@@ -546,10 +552,10 @@ class _HomePageState extends State<HomePage> {
                                 MaterialButton(
                                   color: correctGuess,
                                   minWidth: double.infinity,
-                                  child: const Text("OK"),
                                   onPressed: (() {
                                     Navigator.of(context).pop();
-                                  })
+                                  }),
+                                  child: const Text("OK")
                                 ),
                               ],
                             ),
@@ -605,10 +611,10 @@ class _HomePageState extends State<HomePage> {
                                 MaterialButton(
                                   color: correctGuess,
                                   minWidth: double.infinity,
-                                  child: const Text("OK"),
                                   onPressed: (() {
                                     Navigator.of(context).pop();
-                                  })
+                                  }),
+                                  child: const Text("OK")
                                 ),
                               ],
                             ),
@@ -645,6 +651,9 @@ class _HomePageState extends State<HomePage> {
                                 const Text("GNU GPL License v.3"),
                                 const SizedBox(height: 10,),
                                 InkWell(
+                                  onTap: (() {
+                                    //launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
+                                  }),
                                   child: const Text(
                                     "https://github.com/billyinferno/wxrdle",
                                     style: TextStyle(
@@ -652,9 +661,6 @@ class _HomePageState extends State<HomePage> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  onTap: (() {
-                                    //launch('https://github.com/billyinferno/wxrdle', forceSafariVC: false, forceWebView: false);
-                                  }),
                                 ),
                                 const SizedBox(height: 10,),
                                 const Text(
@@ -665,6 +671,9 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 InkWell(
+                                  onTap: (() {
+                                    //launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
+                                  }),
                                   child: const Text(
                                     "https://word.tips",
                                     style: TextStyle(
@@ -672,9 +681,6 @@ class _HomePageState extends State<HomePage> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  onTap: (() {
-                                    //launch('https://word.tips/', forceSafariVC: false, forceWebView: false);
-                                  }),
                                 ),
                                 const SizedBox(height: 10,),
                                 const Text(
@@ -685,6 +691,9 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 InkWell(
+                                  onTap: (() {
+                                    //launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
+                                  }),
                                   child: const Text(
                                     "https://yourdictionary.com",
                                     style: TextStyle(
@@ -692,18 +701,15 @@ class _HomePageState extends State<HomePage> {
                                       fontSize: 12,
                                     ),
                                   ),
-                                  onTap: (() {
-                                    //launch('https://yourdictionary.com/', forceSafariVC: false, forceWebView: false);
-                                  }),
                                 ),
                                 const SizedBox(height: 10,),
                                 MaterialButton(
                                   color: correctGuess,
                                   minWidth: double.infinity,
-                                  child: const Text("OK"),
                                   onPressed: (() {
                                     Navigator.of(context).pop();
                                   }),
+                                  child: const Text("OK"),
                                 )
                               ],
                             ),
@@ -802,7 +808,7 @@ class _HomePageState extends State<HomePage> {
                             ),
                             const SizedBox(width: 5,),
                             Text(
-                              "(" + _gameHighScore[_currentGameMode]!.toString() + ")",
+                              "(${_gameHighScore[_currentGameMode]!})",
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -818,7 +824,7 @@ class _HomePageState extends State<HomePage> {
                             padding: const EdgeInsets.all(5),
                             color: Colors.red,
                             child: Text(
-                              _currentWrongGuess + " is not found in dictionary",
+                              "$_currentWrongGuess is not found in dictionary",
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: textColor,
@@ -974,6 +980,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 30,),
               ],
             ),
           ),
@@ -983,7 +990,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<bool> _checkAnswer() async {
-    bool _checkFailed = false;
+    bool checkFailed = false;
 
     if(_currentDictCheck == 1) {
       // perform a dictionary check first
@@ -993,15 +1000,17 @@ class _HomePageState extends State<HomePage> {
         await _getWordsAPI.searchWords(
           word: _guess
         ).then((resp) {
-          _checkFailed = resp;
+          checkFailed = resp;
         }).whenComplete(() {
-          // remove loader when complete
-          Navigator.of(context).pop();
+          if (mounted) {
+            // remove loader when complete
+            Navigator.of(context).pop();
+          }
         });
       }
     }
 
-    if(_checkFailed) {
+    if(checkFailed) {
       return false;
     }
 
@@ -1013,13 +1022,13 @@ class _HomePageState extends State<HomePage> {
       length: _maxLength,
     );
 
-    AnswerList _currentAnswerData = AnswerList(answer: _guess, correct: (_answer == _guess));
-    _currentAnswerList[_currentIndex] = _currentAnswerData;
+    AnswerList currentAnswerData = AnswerList(answer: _guess, correct: (_answer == _guess));
+    _currentAnswerList[_currentIndex] = currentAnswerData;
 
-    String _tempAnswer = _answer;
-    String _currGuess = "";
-    String _currAnswer = "";
-    int _guessPos = -1;
+    String tempAnswer = _answer;
+    String currGuess = "";
+    String currAnswer = "";
+    int guessPos = -1;
 
     // map the keyboard result with the guess
     _keyboardResult = {};
@@ -1028,26 +1037,26 @@ class _HomePageState extends State<HomePage> {
     }
 
     for(int i = 0; i < _guess.length; i++) {
-      _currGuess = _guess.substring(i, (i + 1));
-      _currAnswer = _answer.substring(i, (i + 1));
-      if(_currGuess == _currAnswer) {
-        _keyboardResult[_currGuess] = 2;
-        _tempAnswer = _tempAnswer.substring(0, i) + " " + _tempAnswer.substring(i + 1);
+      currGuess = _guess.substring(i, (i + 1));
+      currAnswer = _answer.substring(i, (i + 1));
+      if(currGuess == currAnswer) {
+        _keyboardResult[currGuess] = 2;
+        tempAnswer = "${tempAnswer.substring(0, i)} ${tempAnswer.substring(i + 1)}";
       }
     }
 
     // now scan thru all the guess on the answer
     for(int i = 0; i < _guess.length; i++) {
       // only check if the color is transparent
-      _currGuess = _guess.substring(i, (i + 1));
-      if(_keyboardResult[_currGuess] == -1) {
-        _guessPos = _tempAnswer.indexOf(_currGuess);
-        if(_guessPos >= 0) {
-          _keyboardResult[_currGuess] = 3;
-          _tempAnswer = _tempAnswer.substring(0, _guessPos) + " " + _tempAnswer.substring(_guessPos + 1);
+      currGuess = _guess.substring(i, (i + 1));
+      if(_keyboardResult[currGuess] == -1) {
+        guessPos = tempAnswer.indexOf(currGuess);
+        if(guessPos >= 0) {
+          _keyboardResult[currGuess] = 3;
+          tempAnswer = "${tempAnswer.substring(0, guessPos)} ${tempAnswer.substring(guessPos + 1)}";
         }
         else {
-          _keyboardResult[_currGuess] = 0;
+          _keyboardResult[currGuess] = 0;
         }
       }
     }
@@ -1104,136 +1113,136 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _getConfiguration() async {
-    int? _currentPointOnBox;
-    int? _currentMaxLength;
-    int? _currentMaxAnswer;
-    int? _currentConfigGameMode;
-    int? _currentConfigDictCheck;
-    int? _currentHighScore;
-    int? _currentTotalHints;
-    int? _currentTotalStreak;
+    int? currentPointOnBox;
+    int? currentMaxLength;
+    int? currentMaxAnswer;
+    int? currentConfigGameMode;
+    int? currentConfigDictCheck;
+    int? currentHighScore;
+    int? currentTotalHints;
+    int? currentTotalStreak;
 
-    _currentPointOnBox = LocalBox.get(key: 'current_point');
-    _currentMaxLength = LocalBox.get(key: 'max_length');
-    _currentMaxAnswer = LocalBox.get(key: 'max_answer');
-    _currentConfigGameMode = LocalBox.get(key: 'game_mode');
-    _currentConfigDictCheck = LocalBox.get(key: 'dict_check');
-    _currentTotalHints = LocalBox.get(key: 'total_hints');
-    _currentTotalStreak = LocalBox.get(key: 'total_streak');
+    currentPointOnBox = LocalBox.get(key: 'current_point');
+    currentMaxLength = LocalBox.get(key: 'max_length');
+    currentMaxAnswer = LocalBox.get(key: 'max_answer');
+    currentConfigGameMode = LocalBox.get(key: 'game_mode');
+    currentConfigDictCheck = LocalBox.get(key: 'dict_check');
+    currentTotalHints = LocalBox.get(key: 'total_hints');
+    currentTotalStreak = LocalBox.get(key: 'total_streak');
 
     // check if _currentPointOnBox is null or not?
-    if(_currentPointOnBox == null) {
+    if(currentPointOnBox == null) {
       // put the current point as 0 on the box
       await LocalBox.put(key: 'current_point', value: 0);
     }
     else {
       // put the current point on box to _currentPoint
-      _currentPoint = _currentPointOnBox;
+      _currentPoint = currentPointOnBox;
     }
 
-    if(_currentMaxLength == null) {
+    if(currentMaxLength == null) {
       await LocalBox.put(key: 'max_length', value: _maxLength);
     }
     else {
-      _maxLength = _currentMaxLength;
+      _maxLength = currentMaxLength;
     }
 
-    if(_currentMaxAnswer == null) {
+    if(currentMaxAnswer == null) {
       await LocalBox.put(key: 'max_answer', value: _maxAnswer);
     }
     else {
-      _maxAnswer = _currentMaxAnswer;
+      _maxAnswer = currentMaxAnswer;
     }
 
-    if(_currentConfigGameMode == null) {
+    if(currentConfigGameMode == null) {
       await LocalBox.put(key: 'game_mode', value: _currentGameMode);
     }
     else {
-      _currentGameMode = _currentConfigGameMode;
+      _currentGameMode = currentConfigGameMode;
     }
 
-    if(_currentConfigDictCheck == null) {
+    if(currentConfigDictCheck == null) {
       await LocalBox.put(key: 'game_mode', value: _currentDictCheck);
     }
     else {
-      _currentDictCheck = _currentConfigDictCheck;
+      _currentDictCheck = currentConfigDictCheck;
     }
 
     // get high score for all mode
     // mode - 0
-    _currentHighScore = LocalBox.get(key: 'high_score_0');
-    if(_currentHighScore == null) {
+    currentHighScore = LocalBox.get(key: 'high_score_0');
+    if(currentHighScore == null) {
       await LocalBox.put(key: 'high_score_0', value: _gameHighScore[0]);
     }
     else {
-      _gameHighScore[0] = _currentHighScore;
+      _gameHighScore[0] = currentHighScore;
     }
     // mode - 1
-    _currentHighScore = LocalBox.get(key: 'high_score_1');
-    if(_currentHighScore == null) {
+    currentHighScore = LocalBox.get(key: 'high_score_1');
+    if(currentHighScore == null) {
       await LocalBox.put(key: 'high_score_1', value: _gameHighScore[1]);
     }
     else {
-      _gameHighScore[1] = _currentHighScore;
+      _gameHighScore[1] = currentHighScore;
     }
     // mode - 2
-    _currentHighScore = LocalBox.get(key: 'high_score_2');
-    if(_currentHighScore == null) {
+    currentHighScore = LocalBox.get(key: 'high_score_2');
+    if(currentHighScore == null) {
       await LocalBox.put(key: 'high_score_2', value: _gameHighScore[2]);
     }
     else {
-      _gameHighScore[2] = _currentHighScore;
+      _gameHighScore[2] = currentHighScore;
     }
 
     // get current total hints available for user
-    if(_currentTotalHints == null) {
+    if(currentTotalHints == null) {
       // default hints is 5
       await LocalBox.put(key: 'total_hints', value: 5);
       _totalHints = 5;
     }
     else {
       // put the current point on box to _currentPoint
-      _totalHints = _currentTotalHints;
+      _totalHints = currentTotalHints;
     }
 
     // get current total streak of user
-    if(_currentTotalStreak == null) {
+    if(currentTotalStreak == null) {
       // default hints is 5
       await LocalBox.put(key: 'total_streak', value: 0);
     }
     else {
       // put the current point on box to _currentPoint
-      _totalStreak = _currentTotalStreak;
+      _totalStreak = currentTotalStreak;
     }
   }
 
   Future<void> _getAnswerList() async {
-    dynamic _boxAnswerList;
+    dynamic boxAnswerList;
 
-    _boxAnswerList = LocalBox.get(key: 'answer_list');
+    boxAnswerList = LocalBox.get(key: 'answer_list');
     // check if this is not null?
-    if(_boxAnswerList != null) {
+    if(boxAnswerList != null) {
       // this is list of answer, so convert this dynamic to list of string
-      List<String> _currAnswerList = List<String>.from(_boxAnswerList);
-      for (String _currentList in _currAnswerList) {
+      List<String> currAnswerList = List<String>.from(boxAnswerList);
+      for (String currentList in currAnswerList) {
         // convert this to answer list model
-        AnswerList _answer = AnswerList.fromJson(jsonDecode(_currentList));
+        AnswerList answer = AnswerList.fromJson(jsonDecode(currentList));
         // add this to the answer list
-        _answerList.add(_answer);
+        _answerList.add(answer);
       }
     }
   }
 
   Future<void> _putAnswerList() async {
-    List<String> _listOfAnswer = [];
+    List<String> listOfAnswer = [];
 
     // loop thru the answer list
-    for (AnswerList _answerData in _answerList) {
-      _listOfAnswer.add(jsonEncode(_answerData.toJson()));
+    for (AnswerList answerData in _answerList) {
+      listOfAnswer.add(jsonEncode(answerData.toJson()));
     }
 
     // put on the box
-    await LocalBox.put(key: 'answer_list', value: _listOfAnswer);
+    await LocalBox.put(key: 'answer_list', value: listOfAnswer);
   }
 
   Future<bool> _resetGame() async {
@@ -1259,15 +1268,17 @@ class _HomePageState extends State<HomePage> {
 
         // get the definition
         try {
-          await _getWordsAPI.getDefinition(word: _wordList.wordPages[0].wordList[0].word).then((def) {
+          await _getWordsAPI.getDefinition(word: _answer.toLowerCase()).then((def) {
             if(def.data.isNotEmpty) {
               _defHeadword = def.data[0].headword;
               _defPart = def.data[0].pos[0].poPart;
               _defMeaning = "";
               for (Sense senses in def.data[0].pos[0].senses) {
-                if(senses.txt.isNotEmpty) {
-                  _defMeaning = senses.txt;
-                  break;
+                if (senses.txt != null) {
+                  if(senses.txt!.isNotEmpty) {
+                    _defMeaning = senses.txt;
+                    break;
+                  }
                 }
               }
               _defUrl = def.data[0].audio;
@@ -1281,7 +1292,7 @@ class _HomePageState extends State<HomePage> {
           });
         }
         catch(e) {
-          debugPrint("⚠️ " + e.toString());
+          debugPrint("⚠️ $e");
           // defaulted this to null
           _defHeadword = null;
           _defPart = null;
@@ -1304,7 +1315,7 @@ class _HomePageState extends State<HomePage> {
       return true;
     }
     catch(e) {
-      debugPrint("⚠️ " + e.toString());
+      debugPrint("⚠️ $e");
       // unable to get word from API showed the error message
       _errorGetWord = true;
       return false;
@@ -1312,31 +1323,31 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<WordList> _getWordsFromAPI() async {
-    List<String> _alphabet = List.generate(26, (index) {
+    List<String> alphabet = List.generate(26, (index) {
       return String.fromCharCode(97 + index);
     });
     
-    String _firstChar;
-    String _endChar;
+    String firstChar;
+    String endChar;
 
-    WordList _result = WordList(wordPages: []);
+    WordList result = WordList(wordPages: []);
 
-    while(_result.wordPages.isEmpty) {
+    while(result.wordPages.isEmpty) {
       // shuffle the alphabet
-      _alphabet.shuffle(_random);
-      _firstChar = _alphabet[0];
+      alphabet.shuffle(_random);
+      firstChar = alphabet[0];
       
-      _alphabet.shuffle(_random);
-      _endChar = _alphabet[0];
+      alphabet.shuffle(_random);
+      endChar = alphabet[0];
 
       try {
         await _getWordsAPI.getWords(
           length: _maxLength,
-          startChar: _firstChar,
-          endChar: _endChar,
+          startChar: firstChar,
+          endChar: endChar,
           dictionary: "wordle",
         ).then((resp) {
-          _result = resp;
+          result = resp;
         });
       }
       catch(e) {
@@ -1344,7 +1355,7 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    return _result;
+    return result;
   }
 
   Future<void> _checkState() async {
@@ -1377,34 +1388,34 @@ class _HomePageState extends State<HomePage> {
     // load should be only performed when we first load the app
     // otherwise we will just perform save state.
     // in case the savestate is null, then no need to perform anything.
-    String? _saveString = LocalBox.get(key: 'save_state');
-    if(_saveString != null) {
+    String? saveString = LocalBox.get(key: 'save_state');
+    if(saveString != null) {
       // save string is not null, means we already have save state
       // parse this save string as SaveStateModel
-      SaveStateModel _save = SaveStateModel.fromJson(jsonDecode(_saveString));
+      SaveStateModel save = SaveStateModel.fromJson(jsonDecode(saveString));
       
       // we got the save state, now we need to change the current index, etc.
-      _currentIndex = _save.currentIndex;
+      _currentIndex = save.currentIndex;
 
       // set the answer to the one that we put on the save state
-      _answer = _save.answer;
-      _answerPoint = _save.answerPoints;
+      _answer = save.answer;
+      _answerPoint = save.answerPoints;
 
       // set the definition
-      _defHeadword = _save.defHeadword;
-      _defMeaning = _save.defMeaning;
-      _defPart = _save.defPart;
-      _defUrl = _save.defUrl;
+      _defHeadword = save.defHeadword;
+      _defMeaning = save.defMeaning;
+      _defPart = save.defPart;
+      _defUrl = save.defUrl;
 
       _guess = "";
       _keyboardResult = {};
       _currentAnswerList = {};
 
       // then we need to change the keyboard state
-      for (KeyboardMap _kMap in _save.keyboardMap) {
-        _keyboardState[_kMap.id] = _kMap.map;
-        for(int i = 0; i < _keyboardRow[_kMap.id]!.length; i++) {
-          _keyboardResult[_keyboardRow[_kMap.id]![i]] = _kMap.map[i];
+      for (KeyboardMap kMap in save.keyboardMap) {
+        _keyboardState[kMap.id] = kMap.map;
+        for(int i = 0; i < _keyboardRow[kMap.id]!.length; i++) {
+          _keyboardResult[_keyboardRow[kMap.id]![i]] = kMap.map[i];
         }
       }
 
@@ -1417,9 +1428,9 @@ class _HomePageState extends State<HomePage> {
       // then after that we need to generate a correct word box for each box
       // that already answered
       int i = 0;
-      for (SaveAnswerList _ans in _save.answerList) {
-        _wordBox[i] = WordBox(answer: _save.answer, guess: _ans.answer, checkAnswer: true, length: _maxLength,);
-        _currentAnswerList[i] = AnswerList(answer: _ans.answer, correct: _ans.result);
+      for (SaveAnswerList ans in save.answerList) {
+        _wordBox[i] = WordBox(answer: save.answer, guess: ans.answer, checkAnswer: true, length: _maxLength,);
+        _currentAnswerList[i] = AnswerList(answer: ans.answer, correct: ans.result);
         i = i + 1;
       }
 
@@ -1433,45 +1444,45 @@ class _HomePageState extends State<HomePage> {
   Future<void> _saveState({bool? isReset}) async {
     // check if this is reset or not?
     // if reset, then we just stored null on the storage
-    bool _isReset = (isReset ?? false);
+    bool isBeingReset = (isReset ?? false);
 
-    if(_isReset) {
+    if(isBeingReset) {
       await LocalBox.put(key: 'save_state', value: null);
     }
     else {
-      List<KeyboardMap> _kMap = [];
+      List<KeyboardMap> kMap = [];
 
       // loop thru _keyboardState
       _keyboardState.forEach((key, value) {
-        _kMap.add(KeyboardMap(id: key, map: _keyboardState[key]!));
+        kMap.add(KeyboardMap(id: key, map: _keyboardState[key]!));
       });
 
       // loop thru current answer list
-      List<SaveAnswerList> _sAnswer = [];
+      List<SaveAnswerList> sAnswer = [];
       _currentAnswerList.forEach((key, value) {
-        _sAnswer.add(SaveAnswerList(answer: _currentAnswerList[key]!.answer, result: _currentAnswerList[key]!.correct));
+        sAnswer.add(SaveAnswerList(answer: _currentAnswerList[key]!.answer, result: _currentAnswerList[key]!.correct));
       });
 
       // generate the save state for this
-      SaveStateModel _save = SaveStateModel(
+      SaveStateModel saveState = SaveStateModel(
         currentIndex: (_currentIndex + 1),
         answer: _answer,
         answerPoints: _answerPoint,
-        answerList: _sAnswer,
+        answerList: sAnswer,
         defHeadword: _defHeadword,
         defMeaning: _defMeaning,
         defPart: _defPart,
         defUrl: _defUrl,
-        keyboardMap: _kMap
+        keyboardMap: kMap
       );
 
       // save to local storage
-      await LocalBox.put(key: 'save_state', value: jsonEncode(_save.toJson()));
+      await LocalBox.put(key: 'save_state', value: jsonEncode(saveState.toJson()));
     }
   }
 
   void _updateScore(bool isWin) async {
-    int _currentHighScore = _gameHighScore[_currentGameMode]!;
+    int currentHighScore = _gameHighScore[_currentGameMode]!;
 
     if(!isWin) {
       // check the game mode
@@ -1490,10 +1501,10 @@ class _HomePageState extends State<HomePage> {
 
     // check if current point more than high score or not?
     // if more then save the current point
-    if(_currentPoint > _currentHighScore) {
+    if(_currentPoint > currentHighScore) {
       // put this on the local storage
       _gameHighScore[_currentGameMode] = _currentPoint;
-      await LocalBox.put(key: 'high_score_' + _currentGameMode.toString(), value: _currentPoint);
+      await LocalBox.put(key: 'high_score_$_currentGameMode', value: _currentPoint);
     }
   }
 
@@ -1543,30 +1554,32 @@ class _HomePageState extends State<HomePage> {
           _updateScore(true);
 
           // generate the answer list and put on the answer list
-          AnswerList _answerData = AnswerList(answer: _answer, correct: true);
-          _answerList.add(_answerData);
+          AnswerList answerData = AnswerList(answer: _answer, correct: true);
+          _answerList.add(answerData);
           await _putAnswerList();
 
           // save the state as reset
           await _saveState(isReset: true);
 
           // show dialog, and reset game
-          showAlertDialog(
-            context: context,
-            title: "You Win",
-            body: "Congratulations, correct answer is " + _answer + " with " + _pointGot.toString() + " points.",
-            headword: _defHeadword,
-            part: _defPart,
-            meaning: _defMeaning,
-            url: _defUrl,
-            callback: _resetGame,
-            enableButton: _enableAllButton
-          ).then((value) {
-            // just set state
-            setState(() {
-              _isLoading = false;
+          if (mounted) {
+            showAlertDialog(
+              context: context,
+              title: "You Win",
+              body: "Congratulations, correct answer is $_answer with $_pointGot points.",
+              headword: _defHeadword,
+              part: _defPart,
+              meaning: _defMeaning,
+              url: _defUrl,
+              callback: _resetGame,
+              enableButton: _enableAllButton
+            ).then((value) {
+              // just set state
+              setState(() {
+                _isLoading = false;
+              });
             });
-          });
+          }
         }
         else {
           // next current index
@@ -1588,29 +1601,31 @@ class _HomePageState extends State<HomePage> {
             _updateScore(false);
 
             // generate the answer list and put on the answer list
-            AnswerList _answerData = AnswerList(answer: _answer, correct: false);
-            _answerList.add(_answerData);
+            AnswerList answerData0 = AnswerList(answer: _answer, correct: false);
+            _answerList.add(answerData0);
             await _putAnswerList();
 
             // save the state as reset
             await _saveState(isReset: true);
 
-            showAlertDialog(
-              context: context,
-              title: "You Lose",
-              body: "Try again next time, correct answer is " + _answer,
-              headword: _defHeadword,
-              part: _defPart,
-              meaning: _defMeaning,
-              url: _defUrl,
-              callback: _resetGame,
-              enableButton: _enableAllButton
-            ).then((value) {
-              // just set state
-              setState(() {
-                _isLoading = false;
+            if (mounted) {
+              showAlertDialog(
+                context: context,
+                title: "You Lose",
+                body: "Try again next time, correct answer is $_answer",
+                headword: _defHeadword,
+                part: _defPart,
+                meaning: _defMeaning,
+                url: _defUrl,
+                callback: _resetGame,
+                enableButton: _enableAllButton
+              ).then((value) {
+                // just set state
+                setState(() {
+                  _isLoading = false;
+                });
               });
-            });
+            }
           }
         }
       }

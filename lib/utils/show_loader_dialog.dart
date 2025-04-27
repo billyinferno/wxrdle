@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wxrdle/globals/colors.dart';
 
 void showLoaderDialog(BuildContext context) {
-  AlertDialog _alert = const AlertDialog(
+  AlertDialog alert = const AlertDialog(
     backgroundColor: Colors.transparent,
     elevation: 0,
     content: Center(
@@ -16,7 +16,7 @@ void showLoaderDialog(BuildContext context) {
       barrierDismissible: false,
       context: context,
       builder: (BuildContext context) {
-        return _alert;
+        return alert;
       }
   );
 }

@@ -16,11 +16,7 @@ Future<void> showAlertDialog({
   required AsyncCallback callback,
   required VoidCallback enableButton,
 }) async {
-  AudioPlayer _player = AudioPlayer();
-
-  if(url != null && url.isNotEmpty) {
-    _player.setUrl(url);
-  }
+  AudioPlayer player = AudioPlayer();
 
   return showDialog<void>(
     context: context,
@@ -44,7 +40,9 @@ Future<void> showAlertDialog({
               child: IconButton(
                 onPressed: (() async {
                   debugPrint("Play audio");
-                  await _player.play(url!);
+                  if(url != null && url.isNotEmpty) {
+                    await player.play(UrlSource(url));
+                  }
                 }),
                 icon: const Icon(
                   CupertinoIcons.speaker_3,
@@ -111,22 +109,28 @@ Future<void> showAlertDialog({
         actions: <Widget>[
           MaterialButton(
             minWidth: double.infinity,
-            child: const Text("NEW WORD"),
             color: correctGuess,
             onPressed: (() async {
-              // show loader
-              showLoaderDialog(context);
-              
-              // reset the game
-              await callback();
-              enableButton();
-              
-              // remove the loader
-              Navigator.of(context).pop();
+              if (context.mounted) {
+                // show loader
+                showLoaderDialog(context);
+                
+                // reset the game
+                await callback().whenComplete(() {
+                  // enable back the button
+                  enableButton();
 
-              // remove the dialog
-              Navigator.of(context).pop();
-            })
+                  if (context.mounted) {
+                    // remove the loader
+                    Navigator.of(context).pop();
+  
+                    // remove the dialog
+                    Navigator.of(context).pop();
+                  }
+                });  
+              }
+            }),
+            child: const Text("NEW WORD")
           ),
         ],
       );

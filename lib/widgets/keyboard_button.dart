@@ -5,35 +5,35 @@ class KeyboardButton extends StatelessWidget {
   final String char;
   final int enabled;
   final Function(String) onPress;
-  const KeyboardButton({ Key? key, required this.char, required this.enabled, required this.onPress }) : super(key: key);
+  const KeyboardButton({ super.key, required this.char, required this.enabled, required this.onPress });
 
   @override
   Widget build(BuildContext context) {
-    double _width = (MediaQuery.of(context).size.width - 20) / 10;
-    if (_width > 50) {
-      _width = 50;
+    double width = (MediaQuery.of(context).size.width - 20) / 10;
+    if (width > 50) {
+      width = 50;
     }
 
-    Color _color = buttonBackground;
+    Color color = buttonBackground;
     switch(enabled) {
       case 0:
-        _color = buttonDisableBackground;
+        color = buttonDisableBackground;
         break;
       case 1:
-        _color = buttonBackground;
+        color = buttonBackground;
         break;
       case 2:
-        _color = correctGuess;
+        color = correctGuess;
         break;
       case 3:
-        _color = locationGuess;
+        color = locationGuess;
         break;
       default:
-        _color = buttonBackground;
+        color = buttonBackground;
         break;
     }
     return SizedBox(
-      width: _width,
+      width: width,
       height: 50,
       child: InkWell(
         onTap: (() {
@@ -41,7 +41,7 @@ class KeyboardButton extends StatelessWidget {
         }),
         child: Container(
           decoration: BoxDecoration(
-            color: _color,
+            color: color,
             borderRadius: BorderRadius.circular(5),
           ),
           margin: const EdgeInsets.all(2),

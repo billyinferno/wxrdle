@@ -8,31 +8,31 @@ import 'package:wxrdle/model/word_list.dart';
 class GetWordsAPI {
   Future<WordList> getWords({String? startChar, String? endChar, required int length, String? dictionary}) async {
     // generate the url based on the startChar and endChar
-    String _apiUrl = apiUrl;
-    bool _gotParam = false;
-    String _dictionary = (dictionary ?? 'all_en');
+    String currentApiURL = apiUrl;
+    bool gotParam = false;
+    String currentDictionary = (dictionary ?? 'all_en');
 
     if(startChar != null) {
-      _apiUrl = _apiUrl + "starts_with=" + startChar;
-      _gotParam = true;
+      currentApiURL = "${currentApiURL}starts_with=$startChar";
+      gotParam = true;
     }
 
     if(endChar != null) {
-      if(_gotParam) {
-        _apiUrl = _apiUrl + "&";
+      if(gotParam) {
+        currentApiURL = "$currentApiURL&";
       }
-      _apiUrl = _apiUrl + "ends_with=" + endChar;
-      _gotParam = true;
+      currentApiURL = "${currentApiURL}ends_with=$endChar";
+      gotParam = true;
     }
 
-    if(_gotParam) {
-      _apiUrl = _apiUrl + "&";
+    if(gotParam) {
+      currentApiURL = "$currentApiURL&";
     }
-    _apiUrl = _apiUrl + "length=" + length.toString() + "&word_sorting=points&group_by_length=false&page_size=99999&dictionary=" + _dictionary;
+    currentApiURL = "${currentApiURL}length=$length&word_sorting=points&group_by_length=false&page_size=99999&dictionary=$currentDictionary";
     // debugPrint(_apiUrl);
 
     final response = await http.get(
-      Uri.parse(_apiUrl),
+      Uri.parse(currentApiURL),
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
@@ -41,8 +41,8 @@ class GetWordsAPI {
     if(response.statusCode == 200) {
       // parse the response to get the word list
       // debugPrint(response.body);
-      WordList _wordList = WordList.fromJson(jsonDecode(response.body));
-      return _wordList;
+      WordList wordList = WordList.fromJson(jsonDecode(response.body));
+      return wordList;
     }
     else {
       throw Exception("Error when trying to get word from API");
@@ -51,13 +51,13 @@ class GetWordsAPI {
 
   Future<bool> searchWords({required String word}) async {
     // generate the url based on the startChar and endChar
-    String _apiUrl = apiUrl;
+    String currentApiUrl = apiUrl;
 
-    _apiUrl = _apiUrl + "letters=" + word.toLowerCase() + "&length=" + word.length.toString() + "&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
+    currentApiUrl = "${currentApiUrl}letters=${word.toLowerCase()}&length=${word.length}&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
     // debugPrint(_apiUrl);
 
     final response = await http.get(
-      Uri.parse(_apiUrl),
+      Uri.parse(currentApiUrl),
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
@@ -66,16 +66,16 @@ class GetWordsAPI {
     if(response.statusCode == 200) {
       // parse the response to get the word list
       // debugPrint(response.body);
-      WordList _wordList = WordList.fromJson(jsonDecode(response.body));
-      if(_wordList.wordPages.isEmpty) {
+      WordList wordList = WordList.fromJson(jsonDecode(response.body));
+      if(wordList.wordPages.isEmpty) {
         return true;
       }
 
       // wordPages is not empty, means we need to loop and see whether there are any word match
       // if there are word match then return as false, if not, then return as true
-      WordPage _wp = _wordList.wordPages[0];
-      for (WordListElement _wl in _wp.wordList) {
-        if(_wl.word.toLowerCase() == word.toLowerCase()) {
+      WordPage wp = wordList.wordPages[0];
+      for (WordListElement wl in wp.wordList) {
+        if(wl.word.toLowerCase() == word.toLowerCase()) {
           return false;
         }
       }
@@ -87,10 +87,10 @@ class GetWordsAPI {
   }
 
   Future<DefinitionModel> getDefinition({required String word}) async {
-    String _defUrl = defUrl + word;
+    String currentDefUrl = defUrl + word;
 
     final response = await http.get(
-      Uri.parse(_defUrl),
+      Uri.parse(currentDefUrl),
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
@@ -99,8 +99,8 @@ class GetWordsAPI {
     if(response.statusCode == 200) {
       // parse the response to get the word list
       // debugPrint(response.body);
-      DefinitionModel _def = DefinitionModel.fromJson(jsonDecode(response.body));
-      return _def;
+      DefinitionModel def = DefinitionModel.fromJson(jsonDecode(response.body));
+      return def;
     }
     else {
       throw Exception("Error when trying to get word definition from API");

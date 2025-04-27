@@ -5,7 +5,7 @@ class GameSelector extends StatefulWidget {
   final int selectedGameMode;
   final Map<int, String> gameType;
   final Function(int) onSelect;
-  const GameSelector({ Key? key, required this. selectedGameMode, required this.gameType, required this.onSelect }) : super(key: key);
+  const GameSelector({ super.key, required this. selectedGameMode, required this.gameType, required this.onSelect });
 
   @override
   State<GameSelector> createState() => _GameSelectorState();

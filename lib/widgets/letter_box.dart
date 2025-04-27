@@ -6,13 +6,13 @@ class LetterBox extends StatelessWidget {
   final Color? color;
   final double? width;
   final double? height;
-  const LetterBox({ Key? key, this.color, this.text, this.width, this.height }) : super(key: key);
+  const LetterBox({ super.key, this.color, this.text, this.width, this.height });
 
   @override
   Widget build(BuildContext context) {
-    Color _bgColor = (color ?? Colors.transparent);
-    double _width = (width ?? 50);
-    double _height = (height ?? 50);
+    Color bgColor = (color ?? Colors.transparent);
+    double currWidth = (width ?? 50);
+    double currHeight = (height ?? 50);
 
     return Container(
       decoration: BoxDecoration(
@@ -21,17 +21,17 @@ class LetterBox extends StatelessWidget {
           width: 1.0,
           style: BorderStyle.solid,
         ),
-        color: _bgColor,
+        color: bgColor,
       ),
-      width: _width,
-      height: _height,
+      width: currWidth,
+      height: currHeight,
       margin: const EdgeInsets.all(5),
       child: Align(
         alignment: Alignment.center,
         child: Text(
           (text ?? ""),
           style: TextStyle(
-            fontSize: (30 * (_width / 50)),
+            fontSize: (30 * (currWidth / 50)),
             color: textColor,
           ),
         ),
