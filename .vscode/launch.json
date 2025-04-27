@@ -10,7 +10,6 @@
             "type": "dart",
             "args": [
                 //"--web-port=56565",
-                "--web-hostname=192.168.1.73",
                 "-d",
                 "chrome"
             ],
@@ -22,7 +21,6 @@
             "flutterMode": "profile",
             "args": [
                 //"--web-port=56565",
-                "--web-hostname=192.168.1.73",
                 "-d",
                 "chrome"
             ],
@@ -34,7 +32,6 @@
             "flutterMode": "release",
             "args": [
                 //"--web-port=56565",
-                "--web-hostname=192.168.1.73",
                 "-d",
                 "chrome"
             ],
