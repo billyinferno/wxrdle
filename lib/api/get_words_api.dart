@@ -9,7 +9,7 @@ class GetWordsAPI {
   // Future<WordList> getWords({String? startChar, String? endChar, required int length, String? dictionary}) async {
   Future<WordList> getWords({required String startChar, required String endChar, required int length}) async {
     // generate the url based on the startChar and endChar
-    String currentApiURL = "${apiUrl}start/$startChar/end/$endChar/length/$length";
+    String currentApiURL = "${URLConfig.apiUrl}get-words/start/$startChar/end/$endChar/length/$length";
 
     final response = await http.get(
       Uri.parse(currentApiURL),
@@ -31,13 +31,10 @@ class GetWordsAPI {
 
   Future<bool> searchWords({required String word}) async {
     // generate the url based on the startChar and endChar
-    String currentApiUrl = apiUrl;
-
-    currentApiUrl = "${currentApiUrl}letters=${word.toLowerCase()}&length=${word.length}&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
-    // debugPrint(_apiUrl);
+    String currentApiURL = "${URLConfig.apiUrl}search-words/word/${word.toLowerCase().trim()}/length/${word.trim().length}";
 
     final response = await http.get(
-      Uri.parse(currentApiUrl),
+      Uri.parse(currentApiURL),
       headers: {
         HttpHeaders.contentTypeHeader: 'application/json',
       },
@@ -45,7 +42,6 @@ class GetWordsAPI {
 
     if(response.statusCode == 200) {
       // parse the response to get the word list
-      // debugPrint(response.body);
       WordList wordList = WordList.fromJson(jsonDecode(response.body));
       if(wordList.wordPages.isEmpty) {
         return true;
@@ -67,7 +63,7 @@ class GetWordsAPI {
   }
 
   Future<DefinitionModel> getDefinition({required String word}) async {
-    String currentDefUrl = defUrl + word;
+    String currentDefUrl = URLConfig.defUrl + word;
 
     final response = await http.get(
       Uri.parse(currentDefUrl),
