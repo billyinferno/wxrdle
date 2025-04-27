@@ -7,9 +7,9 @@ const port = 3498;
 
 const word_url = "https://fly.wordfinderapi.com/api/search?"
 
-function get_words(start, end) {
+function get_words(start, end, length) {
     return new Promise((resolve, reject) => {
-        let url = word_url + "starts_with=" + start + "&ends_with=" + end + "&length=5&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
+        let url = word_url + "starts_with=" + start + "&ends_with=" + end + "&length=" + length + "&word_sorting=points&group_by_length=false&page_size=99999&dictionary=all_en";
         console.info("[get]" + url);
 
         https.get(url, (resp) => {
@@ -68,13 +68,14 @@ app.get('/get-words/start/:start/end/:end/length/:length', async (req, res) => {
         res.send("Invalid data");
     }
     else {
-        // check if this is options?
-        if (req.method == 'OPTIONS') {
-            sendOptionsResponse
+        // ensure length is minimum 5
+        if (length < 5) {
+            length = 5;
         }
+
         // try to get the data
         let words = "";
-        await get_words(start, end).then((resp) => {
+        await get_words(start, end, length).then((resp) => {
             words = resp;
         });
 
