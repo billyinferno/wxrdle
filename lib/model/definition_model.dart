@@ -46,9 +46,9 @@ class Datum {
     });
 
     factory Datum.fromJson(Map<String, dynamic> json) => Datum(
-        slug: json["slug"],
-        headword: json["headword"],
-        audio: json["audio"],
+        slug: (json["slug"] ?? ''),
+        headword: (json["headword"] ?? ''),
+        audio: (json["audio"] ?? ''),
         pos: List<Po>.from(json["pos"].map((x) => Po.fromJson(x))),
     );
 
@@ -108,7 +108,7 @@ class Subsense {
     });
 
     factory Subsense.fromJson(Map<String, dynamic> json) => Subsense(
-        txt: json["txt"],
+        txt: (json["txt"] ?? ''),
     );
 
     Map<String, dynamic> toJson() => {
