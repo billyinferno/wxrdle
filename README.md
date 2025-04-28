@@ -21,7 +21,7 @@ There are few costumizations that you can perform for your game:
 3. The Game Type:
 - <strong>Easy Mode</strong>: The point will keep stacked there are no penalty for skipped/wrong answer.
 - <strong>Continues</strong>: In case you skipped/got wrong answer there will be penalty for your current point (it can be minus).
-- <strong>Survival</strong>: In case you skipper/got wrong answer your current point will be reset back to 0.
+- <strong>Survival</strong>: In case you skipped/got wrong answer your current point will be reset back to 0.
 4. Word Check (to perform dictionary check when player input the guess)
 
 ## Wxrdle Server
