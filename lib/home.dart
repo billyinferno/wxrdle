@@ -70,7 +70,6 @@ class _HomePageState extends State<HomePage> {
   late String _guess;
   late int _maxLength;
   late int _maxAnswer;
-  late WordList _wordList;
   late String? _defHeadword;
   late String? _defPart;
   late String? _defMeaning;
@@ -1250,58 +1249,11 @@ class _HomePageState extends State<HomePage> {
 
   Future<bool> _resetGame() async {
     try {
-      await _getWordsFromAPI().then((value) async {
-        _wordList = value;
-
-        _wordList.wordPages[0].wordList.shuffle();
-
-        // get the word from API call
-        _answer = _wordList.wordPages[0].wordList[0].word.toUpperCase();
-        
-        // calculate the answer point based on the length of answer
-        _answerPoint = _wordList.wordPages[0].wordList[0].points ~/ _maxAnswer;
-        // check if _answerPoint is below 1
-        if(_answerPoint <= 0) {
-          _answerPoint = 1;
-        }
-
+      await _getWordsFromAPI().then((_) async {
+        // reset guess, keyboard result, and current answer list
         _guess = "";
         _keyboardResult = {};
         _currentAnswerList = {};
-
-        // get the definition
-        try {
-          await _getWordsAPI.getDefinition(word: _answer.toLowerCase()).then((def) {
-            if(def.data.isNotEmpty) {
-              _defHeadword = def.data[0].headword;
-              _defPart = def.data[0].pos[0].poPart;
-              _defMeaning = "";
-              for (Sense senses in def.data[0].pos[0].senses) {
-                if (senses.txt != null) {
-                  if(senses.txt!.isNotEmpty) {
-                    _defMeaning = senses.txt;
-                    break;
-                  }
-                }
-              }
-              _defUrl = def.data[0].audio;
-            }
-            else {
-              _defHeadword = null;
-              _defPart = null;
-              _defMeaning = null;
-              _defUrl = null;
-            }
-          });
-        }
-        catch(e) {
-          debugPrint("⚠️ $e");
-          // defaulted this to null
-          _defHeadword = null;
-          _defPart = null;
-          _defMeaning = null;
-          _defUrl = null;
-        }
 
         // start from index 0, if index already _maxAnswer we will need to finished the game
         _currentIndex = 0;
@@ -1325,38 +1277,103 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<WordList> _getWordsFromAPI() async {
+  Future<void> _getWordsFromAPI() async {
     List<String> alphabet = List.generate(26, (index) {
       return String.fromCharCode(97 + index);
     });
+
+    bool wordFind = false;
+    int tries = 0;
+    int index = 0;
     
     String firstChar;
     String endChar;
 
-    WordList result = WordList(wordPages: []);
+    WordList wordList = WordList(wordPages: []);
 
-    while(result.wordPages.isEmpty) {
-      // shuffle the alphabet
-      alphabet.shuffle(_random);
-      firstChar = alphabet[0];
-      
-      alphabet.shuffle(_random);
-      endChar = alphabet[0];
+    // default the definition to null
+    _defHeadword = null;
+    _defPart = null;
+    _defMeaning = null;
+    _defUrl = null;
 
-      await _getWordsAPI.getWords(
-        length: _maxLength,
-        startChar: firstChar,
-        endChar: endChar,
-      ).then((resp) {
-        result = resp;
+    // true to find the word and definition at max 3 times
+    while (!wordFind && tries < 5) {
+      while(wordList.wordPages.isEmpty) {
+        // shuffle the alphabet
+        alphabet.shuffle(_random);
+        firstChar = alphabet[0];
+        
+        alphabet.shuffle(_random);
+        endChar = alphabet[0];
+
+        await _getWordsAPI.getWords(
+          length: _maxLength,
+          startChar: firstChar,
+          endChar: endChar,
+        ).then((resp) {
+          wordList = resp;
+        }).onError((error, stackTrace) {
+          debugPrint("Error:${error.toString()}");
+          debugPrintStack(stackTrace: stackTrace);
+          throw Exception("Error when get words from API");
+        },);
+      }
+
+      // already got the word list, now we try to find the definition
+      wordList.wordPages[0].wordList.shuffle();
+
+      // get the first word from the word list
+      _answer = wordList.wordPages[0].wordList[index].word.toUpperCase();
+        
+      // calculate the answer point based on the length of answer
+      _answerPoint = wordList.wordPages[0].wordList[index].points ~/ _maxAnswer;
+      // check if _answerPoint is below 1
+      if(_answerPoint <= 0) {
+        _answerPoint = 1;
+      }
+
+      // now try to get the definition of this word
+      await _getWordsAPI.getDefinition(word: _answer.toLowerCase()).then((def) {
+        if(def.data.isNotEmpty) {
+          _defHeadword = def.data[0].headword;
+          _defPart = def.data[0].pos[0].poPart;
+          _defMeaning = "";
+          for (Sense senses in def.data[0].pos[0].senses) {
+            if (senses.txt != null) {
+              if(senses.txt!.isNotEmpty) {
+                _defMeaning = senses.txt;
+                break;
+              }
+            }
+          }
+          _defUrl = def.data[0].audio;
+
+          // we find both word and the definition
+          wordFind = true;
+        }
+        else {
+          // next index
+          index = index + 1;
+
+          // check if index already more than wordlist length?
+          if (index >= (wordList.wordPages[0].wordList.length - 1)) {
+            // clear the word list so we will get a new word
+            wordList.wordPages.clear();
+
+            // reset back index to 0
+            index = 0;
+          }
+        }
       }).onError((error, stackTrace) {
         debugPrint("Error:${error.toString()}");
         debugPrintStack(stackTrace: stackTrace);
-        throw Exception("Error when get words from API");
+        throw Exception("Error when get definition from API");
       },);
-    }
 
-    return result;
+      // add tries
+      tries = tries + 1;
+    }
   }
 
   Future<void> _checkState() async {
