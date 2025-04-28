@@ -46,3 +46,4 @@ app.*.map.json
 
 # custom for wxrdle
 /env/.prod.env
+/server/node_modules/
