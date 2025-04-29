@@ -41,7 +41,12 @@ Future<void> showAlertDialog({
                 onPressed: (() async {
                   debugPrint("Play audio");
                   if(url != null && url.isNotEmpty) {
-                    await player.play(UrlSource(url));
+                    await player.play(
+                      UrlSource(url)
+                    ).onError((error, stackTrace) {
+                      debugPrint("Error when playing audio");
+                      debugPrintStack(stackTrace: stackTrace);  
+                    },);
                   }
                 }),
                 icon: const Icon(

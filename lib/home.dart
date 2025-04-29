@@ -817,6 +817,23 @@ class _HomePageState extends State<HomePage> {
                                 color: correctGuess,
                               ),
                             ),
+                            const SizedBox(width: 10,),
+                            Text(
+                              "+",
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.yellow,
+                              ),
+                            ),
+                            Text(
+                              "${_answerPoint * (_maxAnswer - _currentIndex)}",
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.yellow,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 10,),
@@ -1333,6 +1350,9 @@ class _HomePageState extends State<HomePage> {
         _answerPoint = 1;
       }
 
+      // default the audi to using the oxford instead
+      _defUrl = URLConfig.audioUrl1 + _answer.toLowerCase() + URLConfig.audioUrl2;
+
       // now try to get the definition of this word
       await _getWordsAPI.getDefinition(word: _answer.toLowerCase()).then((def) {
         if(def.data.isNotEmpty) {
@@ -1347,7 +1367,6 @@ class _HomePageState extends State<HomePage> {
               }
             }
           }
-          _defUrl = def.data[0].audio;
 
           // we find both word and the definition
           wordFind = true;

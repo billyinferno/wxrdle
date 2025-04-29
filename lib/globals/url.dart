@@ -5,4 +5,6 @@ class URLConfig {
   static String apiUrl = (dotenv.env['URL'] ?? 'http://10.89.96.176:3498/'); //start/x/end/z
   static String version = (dotenv.env['VERSION'] ?? '1.0.0');
   static String defUrl = "https://api.yourdictionary.com/wordfinder/v1/definitions/";
+  static String audioUrl1 = 'https://audio.oxforddictionaries.com/en/mp3/';
+  static String audioUrl2 = '__gb_1.mp3';
 }
